@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'tof_reader'
+package_name = 'movement'
 
 setup(
     name=package_name,
@@ -10,7 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('lib/'+package_name,['tof_reader/tof_node.py'])
+        ('lib/'+package_name,['movement/movement.py'])
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -18,4 +18,9 @@ setup(
     maintainer_email='lankford@mit.edu, ilia.nechaev@jetbrains.com',
     description='Move Duckiebot forward until it detects an object within 0.2 meters',
     license='GPLv3',
+    entry_points={
+        'console_scripts': [
+            'movement_node = movement.movement:main'
+        ],
+    },
 )
