@@ -53,8 +53,18 @@ class AudioPlayer(Node):
         """Receive and parse audio metadata."""
         try:
             metadata = json.loads(msg.data)
-            self.rate = metadata['rate']
-            self.channels = metadata['channels']
+            new_rate = metadata['rate']
+            new_channels = metadata['channels']
+            
+            # Recreate stream if parameters changed
+            if self.stream is not None and (new_rate != self.rate or new_channels != self.channels):
+                self.get_logger().info('Audio format changed, recreating stream...')
+                self.stream.stop_stream()
+                self.stream.close()
+                self.stream = None
+            
+            self.rate = new_rate
+            self.channels = new_channels
             
             # Open audio stream for playback
             if self.stream is None:
@@ -62,7 +72,8 @@ class AudioPlayer(Node):
                     format=self.format,
                     channels=self.channels,
                     rate=self.rate,
-                    output=True
+                    output=True,
+                    frames_per_buffer=2048  # Add buffer size
                 )
                 self.get_logger().info(f'🎧 Audio playback started:')
                 self.get_logger().info(f'   Rate: {self.rate} Hz')
@@ -78,11 +89,23 @@ class AudioPlayer(Node):
             audio_data = base64.b64decode(msg.data)
             
             # Play audio
-            if self.stream:
-                self.stream.write(audio_data)
+            if self.stream and self.stream.is_active():
+                try:
+                    self.stream.write(audio_data, exception_on_underflow=False)
+                except Exception as e:
+                    # Recreate stream if error
+                    self.get_logger().warn(f'Stream error, recreating: {e}')
+                    self.stream.close()
+                    self.stream = self.p.open(
+                        format=self.format,
+                        channels=self.channels,
+                        rate=self.rate,
+                        output=True,
+                        frames_per_buffer=2048
+                    )
             
         except Exception as e:
-            self.get_logger().error(f'Error playing audio: {e}')
+            self.get_logger().error(f'Error processing audio: {e}')
     
     def __del__(self):
         """Cleanup on exit."""

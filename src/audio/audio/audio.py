@@ -58,9 +58,6 @@ class AudioPublisher(Node):
         # Create publisher for audio metadata (rate, channels, etc)
         self.metadata_pub = self.create_publisher(String, 'audio_metadata', 10)
         
-        # Publish metadata once at startup
-        self.publish_metadata()
-        
         # Create timer to read and publish audio at specified rate
         timer_period = 1.0 / publish_rate
         self.timer = self.create_timer(timer_period, self.capture_and_publish)
@@ -88,6 +85,10 @@ class AudioPublisher(Node):
     def capture_and_publish(self):
         """Capture audio chunk and publish to topic."""
         try:
+            # Publish metadata every 50 packets so new subscribers can sync
+            if self.packets_published % 50 == 0:
+                self.publish_metadata()
+            
             # Read audio data from ALSA
             length, data = self.inp.read()
             
