@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Audio Publisher Launch File -->
+    <!-- This launches the audio_publisher node with configurable parameters -->
+    
+    <!-- Launch arguments with defaults -->
+    <arg name="device" default="hw:2,0" description="ALSA device identifier (e.g., hw:2,0)"/>
+    <arg name="rate" default="44100" description="Sample rate in Hz"/>
+    <arg name="channels" default="1" description="Number of audio channels (1=mono, 2=stereo)"/>
+    <arg name="period_size" default="1024" description="ALSA buffer size in frames"/>
+    <arg name="publish_rate" default="20.0" description="Publishing frequency in Hz"/>
+    
+    <!-- Audio publisher node -->
+    <node pkg="audio" exec="audio_publisher" name="audio_publisher" output="screen">
+        <param name="device" value="$(var device)"/>
+        <param name="rate" value="$(var rate)"/>
+        <param name="channels" value="$(var channels)"/>
+        <param name="period_size" value="$(var period_size)"/>
+        <param name="publish_rate" value="$(var publish_rate)"/>
+    </node>
+</launch>
+

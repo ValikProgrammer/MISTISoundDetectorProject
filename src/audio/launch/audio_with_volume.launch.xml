@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Audio Pipeline with Volume Processing -->
+    <!-- Launches publisher and volume processor together -->
+    
+    <!-- Audio capture arguments -->
+    <arg name="device" default="hw:2,0" description="ALSA device identifier"/>
+    <arg name="rate" default="44100" description="Sample rate in Hz"/>
+    <arg name="channels" default="1" description="Number of audio channels"/>
+    <arg name="publish_rate" default="20.0" description="Publishing frequency in Hz"/>
+    
+    <!-- Volume processor arguments -->
+    <arg name="smoothing_factor" default="0.3" description="Volume smoothing (0-1, lower=smoother)"/>
+    <arg name="normalize_to_100" default="true" description="Normalize volume to 0-100 scale"/>
+    
+    <!-- Audio publisher -->
+    <node pkg="audio" exec="audio_publisher" name="audio_publisher" output="screen">
+        <param name="device" value="$(var device)"/>
+        <param name="rate" value="$(var rate)"/>
+        <param name="channels" value="$(var channels)"/>
+        <param name="publish_rate" value="$(var publish_rate)"/>
+    </node>
+    
+    <!-- Volume processor -->
+    <node pkg="audio" exec="volume_processor" name="volume_processor" output="screen">
+        <param name="smoothing_factor" value="$(var smoothing_factor)"/>
+        <param name="normalize_to_100" value="$(var normalize_to_100)"/>
+    </node>
+</launch>
+

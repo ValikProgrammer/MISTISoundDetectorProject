@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Complete Audio Pipeline Launch File -->
+    <!-- Launches both publisher and subscriber for testing -->
+    
+    <!-- Launch arguments -->
+    <arg name="device" default="hw:2,0" description="ALSA device identifier"/>
+    <arg name="rate" default="44100" description="Sample rate in Hz"/>
+    <arg name="channels" default="1" description="Number of audio channels"/>
+    <arg name="publish_rate" default="20.0" description="Publishing frequency in Hz"/>
+    
+    <!-- Audio publisher -->
+    <node pkg="audio" exec="audio_publisher" name="audio_publisher" output="screen">
+        <param name="device" value="$(var device)"/>
+        <param name="rate" value="$(var rate)"/>
+        <param name="channels" value="$(var channels)"/>
+        <param name="publish_rate" value="$(var publish_rate)"/>
+    </node>
+    
+    <!-- Audio subscriber (for testing/analysis) -->
+    <node pkg="audio" exec="audio_subscriber" name="audio_subscriber" output="screen"/>
+</launch>
+

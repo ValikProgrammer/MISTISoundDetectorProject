@@ -1,6 +1,8 @@
 from setuptools import find_packages, setup
+import os
+from glob import glob
 
-package_name = 'blank_package'
+package_name = 'audio'
 
 setup(
     name=package_name,
@@ -10,14 +12,15 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('lib/'+package_name,['blank_package/blank_node.py']) #we added this line, add another if more nodes
+        ('lib/'+package_name,['audio/audio.py', 'audio/audio_subscriber.py', 'audio/volume_processor.py']),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.xml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='root',
     maintainer_email='root@todo.todo',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    description='Audio capture and publishing package for Duckiebot',
+    license='MIT',
     extras_require={
         'test': [
             'pytest',
@@ -25,7 +28,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'blank_node = blank_package.blank_node:main'
+            'audio_publisher = audio.audio:main',
+            'audio_subscriber = audio.audio_subscriber:main',
+            'volume_processor = audio.volume_processor:main'
         ],
     },
 )
