@@ -1,6 +1,6 @@
 git stash 
 git switch master
-git pull master
+git pull 
 git switch christos
 git merge master
 git stash apply
