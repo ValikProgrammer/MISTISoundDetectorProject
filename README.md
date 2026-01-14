@@ -1,3 +1,16 @@
+###
+PROJECT Arhitecture
+
+
+Valentin: audio : audio_stream <- stream (Valentin's work to provide the audio ) 
+Eugen: procees audio_stream and create a new publosher with only VOLUME of sound
+Cristos: Create a class, that gets a volume, write some logic in function `movement`. Let it just rotate and make some moves. Publish to  self.wheels_pub = self.create_publisher(WheelsCmdStamped, f'/{self.vehicle_name}/wheels_cmd', 10)
+
+
+
+
+
+
 # Skeleton Code for Project
 
 In this template repo we have a blank package and blank node structure with some relatively standard edits. This is a good starting place for the project and you can add all your own functionalities by duplicating blank nodes and packages etc. The structure is similar to the example repo structures:
