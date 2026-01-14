@@ -130,11 +130,11 @@ class VolumeProcessor(Node):
             
             self.packets_processed += 1
             
-            # Log periodically
-            if self.packets_processed % 100 == 0:
+            # Log every 10 packets (~1 second at 10Hz)
+            if self.packets_processed % 10 == 0:
                 self.get_logger().info(
-                    f'Processed {self.packets_processed} packets, '
-                    f'current volume: {volume_normalized:.2f}'
+                    f'🔊 Volume: {volume_normalized:.1f}% '
+                    f'(packet #{self.packets_processed})'
                 )
             
         except Exception as e:

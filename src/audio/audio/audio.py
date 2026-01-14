@@ -106,11 +106,12 @@ class AudioPublisher(Node):
                 self.packets_published += 1
                 self.bytes_published += len(data)
                 
-                # Log stats every 100 packets
-                if self.packets_published % 100 == 0:
+                # Log stats every 10 packets (~1 second at 10Hz)
+                if self.packets_published % 10 == 0:
                     self.get_logger().info(
-                        f'Published {self.packets_published} packets, '
-                        f'{self.bytes_published/1024:.1f} KB'
+                        f'📦 Published {self.packets_published} packets, '
+                        f'{self.bytes_published/1024:.1f} KB '
+                        f'(~{self.packets_published // 10} seconds of audio)'
                     )
                     
         except alsaaudio.ALSAAudioError as e:
