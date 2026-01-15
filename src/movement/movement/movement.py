@@ -85,7 +85,7 @@ class SoundHunter(Node):
         self.sound_level = msg.data
 
     def range_callback(self, msg):
-        self.range = msg.range  # not used yet, but ready
+        self.range = msg.range
 
     def odom_callback(self, msg):
         q = msg.pose.pose.orientation
