@@ -85,21 +85,21 @@ class RobotController(Node):
 
     def move_backward(self):
         self.get_logger().info("Moving backward")
-        self.run_wheels('backward_callback', -1.0, -1.0)
+        self.run_wheels('backward_callback', -1.0*self.leftk, -1.0*self.rightk)
 
     def turn_left(self):
         self.get_logger().info("Turning left")
-        self.run_wheels('right_callback', 0.0, 0.5)
+        self.run_wheels('right_callback', 0.0*self.leftk, 0.5*self.leftk)
         self.get_clock().sleep_for(Duration(seconds=1))
         self.run_wheels('stop_callback', 0.0, 0.0)
-        self.run_wheels('forward_callback', 0.5, 0.5)
+        self.run_wheels('forward_callback', 0.5*self.leftk, 0.5*self.rightk)
 
     def turn_right(self):
         self.get_logger().info("Turning right")
-        self.run_wheels('right_callback', 0.5, 0.0)
+        self.run_wheels('right_callback', 0.5*self.leftk, 0.0*self.rightk)
         self.get_clock().sleep_for(Duration(seconds=1))
         self.run_wheels('stop_callback', 0.0, 0.0)
-        self.run_wheels('forward_callback', 0.5, 0.5)
+        self.run_wheels('forward_callback', 0.5*self.leftk, 0.5*self.rightk)
 
     def stop_movement(self):
         self.get_logger().info("Stopping movement")
