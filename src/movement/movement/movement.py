@@ -61,7 +61,7 @@ class SoundHunter(Node):
         self.scan_start_time = None
 
         self.max_sound = 0.0
-        self.best_yaw = 0.0
+        self.best_yaw = 15.7 # 90 degrees right
 
         self.rotating_to_target = False   # rotating to best_yaw
         self.moving_forward = False       # moving toward sound

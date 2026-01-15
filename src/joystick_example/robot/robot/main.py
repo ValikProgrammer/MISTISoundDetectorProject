@@ -11,6 +11,8 @@ from rclpy.time import Duration
 class RobotController(Node):
 
     def __init__(self):
+        self.leftk = 0.8
+        self.rightk = 0.6
         self.vehicle_name = os.getenv("VEHICLE_NAME")
         self.user = os.getenv("USER_NAME")
 
@@ -79,7 +81,7 @@ class RobotController(Node):
 
     def move_forward(self):
         self.get_logger().info("Moving forward")
-        self.run_wheels('forward_callback', 0.5, 0.5)
+        self.run_wheels('forward_callback', 0.5*self.leftk, 0.5*self.rightk)
 
     def move_backward(self):
         self.get_logger().info("Moving backward")
