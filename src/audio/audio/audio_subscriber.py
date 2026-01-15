@@ -9,12 +9,13 @@ from std_msgs.msg import String
 import json
 import base64
 import numpy as np
-
+import os 
 
 class AudioSubscriber(Node):
     def __init__(self):
         super().__init__('audio_subscriber')
         
+        vehicle = os.getenv('VEHICLE_NAME','duckie')
         # Audio parameters (will be set from metadata)
         self.rate = 44100
         self.channels = 1
@@ -23,7 +24,7 @@ class AudioSubscriber(Node):
         # Subscribe to metadata
         self.metadata_sub = self.create_subscription(
             String,
-            'audio_metadata',
+            f'/{vehicle}/audio_metadata',
             self.metadata_callback,
             10
         )
@@ -31,7 +32,7 @@ class AudioSubscriber(Node):
         # Subscribe to audio stream
         self.audio_sub = self.create_subscription(
             String,
-            'audio_stream',
+            f'/{vehicle}/audio_stream',
             self.audio_callback,
             10
         )

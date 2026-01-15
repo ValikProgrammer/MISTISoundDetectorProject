@@ -8,12 +8,12 @@ from std_msgs.msg import String, Int32
 import alsaaudio
 import struct
 import json
-
+import os 
 
 class AudioPublisher(Node):
     def __init__(self):
         super().__init__('audio_publisher')
-        
+        vehicle = os.getenv('VEHICLE_NAME','duckie')
         # Declare parameters with defaults
         self.declare_parameter('device', 'hw:2,0')
         self.declare_parameter('rate', 44100)
@@ -53,10 +53,10 @@ class AudioPublisher(Node):
             raise
         
         # Create publisher for raw audio data
-        self.audio_pub = self.create_publisher(String, 'audio_stream', 10)
+        self.audio_pub = self.create_publisher(String, f'/{vehicle}/audio_stream', 10)
         
         # Create publisher for audio metadata (rate, channels, etc)
-        self.metadata_pub = self.create_publisher(String, 'audio_metadata', 10)
+        self.metadata_pub = self.create_publisher(String, f'/{vehicle}/audio_metadata', 10)
         
         # Publish metadata at startup
         self.publish_metadata()
@@ -99,6 +99,11 @@ class AudioPublisher(Node):
                 # Create message with audio data
                 # We encode as base64 to safely send binary data as string
                 import base64
+                
+                # Ensure data is bytes type to avoid PY_SSIZE_T_CLEAN error
+                if not isinstance(data, bytes):
+                    data = bytes(data)
+                
                 encoded_data = base64.b64encode(data).decode('ascii')
                 
                 msg = String()

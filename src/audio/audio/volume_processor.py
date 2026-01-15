@@ -10,12 +10,14 @@ from std_msgs.msg import String, Float32
 import json
 import base64
 import numpy as np
+import os 
 
 
 class VolumeProcessor(Node):
     def __init__(self):
         super().__init__('volume_processor')
         
+        vehicle = os.getenv('VEHICLE_NAME','duckie')
         # Declare parameters
         self.declare_parameter('smoothing_factor', 0.3)  # For smoothing volume changes
         self.declare_parameter('normalize_to_100', True)  # Normalize volume to 0-100 scale
@@ -36,7 +38,7 @@ class VolumeProcessor(Node):
         # Subscribe to metadata
         self.metadata_sub = self.create_subscription(
             String,
-            'audio_metadata',
+            f'/{vehicle}/audio_metadata',
             self.metadata_callback,
             10
         )
@@ -44,13 +46,13 @@ class VolumeProcessor(Node):
         # Subscribe to audio stream
         self.audio_sub = self.create_subscription(
             String,
-            'audio_stream',
+            f'/{vehicle}/audio_stream',
             self.audio_callback,
             10
         )
         
         # Publisher for volume
-        self.volume_pub = self.create_publisher(Float32, 'volume_stream', 10)
+        self.volume_pub = self.create_publisher(Float32, f'/{vehicle}/volume_stream', 10)
         
         self.get_logger().info('Volume processor started')
         self.get_logger().info(f'  Smoothing factor: {self.smoothing_factor}')
