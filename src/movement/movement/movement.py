@@ -2,12 +2,9 @@
 import os
 import rclpy
 from rclpy.node import Node
-import math 
+import math
 
-from std_msgs.msg import Header
-from sensor_msgs.msg import Range
-from duckietown_msgs.msg import WheelsCmdStamped
-from std_msgs.msg import Header, Float32
+from std_msgs.msg import Header, Float32, String
 from sensor_msgs.msg import Range
 from nav_msgs.msg import Odometry
 from duckietown_msgs.msg import WheelsCmdStamped
@@ -39,10 +36,16 @@ class SoundHunter(Node):
             10
         )
 
-        # ------------------ Publisher ------------------
+        # ------------------ Publishers ------------------
         self.wheels_pub = self.create_publisher(
             WheelsCmdStamped,
             f'/{self.vehicle_name}/wheels_cmd',
+            10
+        )
+        
+        self.state_pub = self.create_publisher(
+            String,
+            f'/{self.vehicle_name}/robot_state',
             10
         )
 
@@ -51,6 +54,9 @@ class SoundHunter(Node):
         self.current_yaw = 0.0
         self.range = float('inf')
 
+        self.waiting_to_scan = False      # 2-second wait before scanning
+        self.wait_start_time = None
+        
         self.scanning = False
         self.scan_start_time = None
 
@@ -61,13 +67,14 @@ class SoundHunter(Node):
         self.moving_forward = False       # moving toward sound
 
         # ------------------ Parameters ------------------
-        self.volume_threshold = 30.0      # start scanning
-        self.scan_duration = 6.0          # seconds
-        self.scan_speed = 0.25            # wheel speed
-        self.rotate_speed = 0.2           # rotation speed
-        self.forward_speed = 0.3          # forward movement speed
-        self.yaw_tolerance = 0.4          # 0.1 radians (~5.7 degrees)
-        self.target_range = 0.1           # 10 cm in meters
+        self.volume_threshold = 20.0      # start scanning
+        self.wait_duration = 5.0          # seconds to wait before scan
+        self.scan_duration = 20.0         # seconds
+        self.scan_speed = 0.9             # wheel speed
+        self.rotate_speed = 0.5           # rotation speed
+        self.forward_speed = 0.8          # forward movement speed
+        self.yaw_tolerance = 0.4          # radians (~5.7 degrees)
+        self.target_range = 0.15          # 15 cm in meters
 
         # ------------------ Control Loop ------------------
         self.timer = self.create_timer(0.1, self.control_loop)  # 10 Hz
@@ -87,9 +94,21 @@ class SoundHunter(Node):
         self.current_yaw = math.atan2(siny_cosp, cosy_cosp)
         
     def control_loop(self):
-        # Start scan only if sound is loud enough
-        if self.sound_level > self.volume_threshold and not self.scanning and not self.rotating_to_target and not self.moving_forward:
-            self.start_scan()
+        # Detect sound and start waiting period
+        if (self.sound_level > self.volume_threshold and 
+            not self.waiting_to_scan and not self.scanning and 
+            not self.rotating_to_target and not self.moving_forward):
+            self.waiting_to_scan = True
+            self.wait_start_time = self.get_clock().now()
+            self.publish_state("sound_detected")
+            self.get_logger().info(f"Sound detected! Waiting {self.wait_duration}s before scan... Level: {self.sound_level:.1f}")
+        
+        # Wait period before scanning
+        if self.waiting_to_scan:
+            elapsed = (self.get_clock().now() - self.wait_start_time).nanoseconds * 1e-9
+            if elapsed >= self.wait_duration:
+                self.waiting_to_scan = False
+                self.start_scan()
 
         # If scanning, continue scan
         if self.scanning:
@@ -124,6 +143,7 @@ class SoundHunter(Node):
         self.scan_start_time = self.get_clock().now()
         self.max_sound = 0.0
         self.best_yaw = self.current_yaw
+        self.publish_state("scanning")
         self.get_logger().info("Started sound scan")
 
     def scan_for_sound(self):
@@ -141,6 +161,7 @@ class SoundHunter(Node):
             self.stop()
             self.scanning = False
             self.rotating_to_target = True  # start rotating to best_yaw
+            self.publish_state("rotating")
             self.get_logger().info(
                 f"Scan complete | Max volume: {self.max_sound:.1f} | Yaw: {self.best_yaw:.2f} rad"
             )
@@ -162,6 +183,7 @@ class SoundHunter(Node):
             self.stop()
             self.rotating_to_target = False
             self.moving_forward = True
+            self.publish_state("moving_forward")
             self.get_logger().info(f"Rotation complete | Current yaw: {self.current_yaw:.2f} rad")
 
     def move_to_target(self):
@@ -172,11 +194,18 @@ class SoundHunter(Node):
             # Reached target
             self.stop()
             self.moving_forward = False
+            self.publish_state("idle")
             self.get_logger().info(f"Target reached | Range: {self.range:.3f} m")
 
     # ===================================================
     # Utility methods
     # ===================================================
+    
+    def publish_state(self, state):
+        """Publish current robot state for LED control"""
+        msg = String()
+        msg.data = state
+        self.state_pub.publish(msg)
 
     def get_loudest_direction(self):
         """Returns yaw (radians) where sound was loudest"""
