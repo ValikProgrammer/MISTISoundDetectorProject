@@ -69,9 +69,9 @@ class SoundHunter(Node):
         # ------------------ Parameters ------------------
         self.volume_threshold = 20.0      # start scanning
         self.wait_duration = 5.0          # seconds to wait before scan
-        self.scan_duration = 20.0         # seconds
-        self.scan_speed = 0.9             # wheel speed
-        self.rotate_speed = 0.5           # rotation speed
+        self.scan_duration = 10.0         # seconds
+        self.scan_speed = 0.3             # wheel speed
+        self.rotate_speed = 0.1           # rotation speed
         self.forward_speed = 0.8          # forward movement speed
         self.yaw_tolerance = 0.4          # radians (~5.7 degrees)
         self.target_range = 0.15          # 15 cm in meters
