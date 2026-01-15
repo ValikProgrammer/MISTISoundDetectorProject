@@ -16,28 +16,20 @@ class SoundHunter(Node):
         self.wheels_pub = self.create_publisher(WheelsCmdStamped, f'/{vehicle}/wheels_cmd', 10)
         self.target = float(os.getenv('TARGET_SOUND','1.0'))
         self.current = 0.0
-        self.prev = None
-        self.eps = 0.05
-
 
     def sound_callback(self, msg):
         self.current = msg.range
         self.move()
 
-    def move(self): #I dont like the logic
-        if self.current >= self.target + self.eps:
-            self.stop()
-            return
-        
-        if self.prev is None or self.current > self.prev + self.eps:
-            self.run_wheels('forward', 0.2, 0.2)
+    def move(self):
+        if self.current < self.target:
+            left = 0.2
+            right = 0.2
         else:
-            self.run_wheels('turn', 0.15, -0.15)
-
-        self.prev = self.current
+            self.stop()
 
     def stop(self):
-        self.run_wheels('stop', 0.0, 0.0)
+        self.run_wheels('stop_callback', 0.0, 0.0)
 
     def run_wheels(self, frame_id, vel_left, vel_right):
         wheel_msg = WheelsCmdStamped()
@@ -52,7 +44,7 @@ class SoundHunter(Node):
 
 def main():
     rclpy.init()
-    tof = SoundHunter()
+    tof = TofNode()
     rclpy.spin(tof)
     rclpy.shutdown()
 

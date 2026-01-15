@@ -4,7 +4,7 @@ PROJECT Arhitecture
 
 Valentin: audio : audio_stream <- stream (Valentin's work to provide the audio ) 
 Eugen: procees audio_stream and create a new publosher with only VOLUME of sound. Publisher name : volume_stream.
-Cristos: Create a class, that gets a volume from volume_stream, write some logic in function `movement`. Let it just rotate and make some moves. Publish to  self.wheels_pub = self.create_publisher(WheelsCmdStamped, f'/{self.vehicle_name}/wheels_cmd', 10)
+Christos: Create a class, that gets a volume from volume_stream, write some logic in function `movement`. Let it just rotate and make some moves. Publish to  self.wheels_pub = self.create_publisher(WheelsCmdStamped, f'/{self.vehicle_name}/wheels_cmd', 10)
 
 
 
