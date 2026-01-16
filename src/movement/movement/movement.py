@@ -233,8 +233,10 @@ class SoundHunter(Node):
 
         # Record loudest sound and the time it occurred
         if self.sound_level > self.max_sound:
+            elapsed_at_max = (self.get_clock().now() - self.scan_start_time).nanoseconds * 1e-9
             self.max_sound = self.sound_level
             self.max_sound_time = self.get_clock().now()
+            self.get_logger().info(f"New max sound: {self.max_sound:.1f} at {elapsed_at_max:.1f}s into scan")
 
         # Check if scan duration completed
         elapsed = (self.get_clock().now() - self.scan_start_time).nanoseconds * 1e-9
@@ -247,34 +249,32 @@ class SoundHunter(Node):
             if self.max_sound_time is not None:
                 # Time from max sound until now
                 time_since_max = (self.get_clock().now() - self.max_sound_time).nanoseconds * 1e-9
-                # Convert time to rotation angle, then back to time for rotation
                 self.rotate_duration = time_since_max
+                self.get_logger().info(
+                    f"Scan complete | Max sound: {self.max_sound:.1f} | "
+                    f"Time since max: {time_since_max:.1f}s | Will rotate back: {self.rotate_duration:.1f}s"
+                )
             else:
-                # No sound detected, don't rotate
+                # No sound detected during scan
                 self.rotate_duration = 0.0
+                self.get_logger().warn("No sound detected during scan!")
             
             if self.is_first_scan:
-                self.is_first_scan = False  # Mark first scan complete
-                self.get_logger().info(
-                    f"360° scan complete | Max volume: {self.max_sound:.1f} | Rotate back: {self.rotate_duration:.1f}s"
-                )
-            else:
-                self.get_logger().info(
-                    f"Rescan complete | Max volume: {self.max_sound:.1f} | Rotate back: {self.rotate_duration:.1f}s"
-                )
+                self.is_first_scan = False
             
-            # Start rotating to target direction
-            if self.rotate_duration > 0.1:  # Only rotate if significant
+            # Start rotating to target direction (even if small rotation)
+            if self.rotate_duration > 0.05:  # Lowered threshold to 0.05s
                 self.rotating_to_target = True
                 self.rotate_start_time = self.get_clock().now()
                 self.publish_state("rotating")
+                self.get_logger().info(f"Starting rotation back for {self.rotate_duration:.1f}s")
             else:
                 # Already facing the right direction, start moving
                 self.moving_forward = True
                 self.move_start_time = self.get_clock().now()
                 self.baseline_sound_avg = self.get_sound_average()
                 self.publish_state("moving_forward")
-                self.get_logger().info(f"No rotation needed | Starting forward movement")
+                self.get_logger().info(f"Rotation not needed ({self.rotate_duration:.2f}s) | Starting forward movement")
 
     def rotate_to_best_yaw(self):
         """Rotate back to face the direction where max sound was heard"""
@@ -293,7 +293,10 @@ class SoundHunter(Node):
             self.baseline_sound_avg = self.get_sound_average()
             self.publish_state("moving_forward")
             self.get_logger().info(
-                f"Rotation complete | Baseline sound avg: {self.baseline_sound_avg:.1f} | Starting forward movement"
+                f"Rotation complete after {elapsed:.1f}s | "
+                f"Current sound: {self.sound_level:.1f} | "
+                f"Baseline avg: {self.baseline_sound_avg:.1f} | "
+                f"Starting forward movement"
             )
 
     def move_to_target(self):
