@@ -12,7 +12,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('lib/'+package_name,['audio/audio.py', 'audio/audio_subscriber.py', 'audio/volume_processor.py']),
+        ('lib/'+package_name,['audio/audio.py', 'audio/audio_subscriber.py', 'audio/volume_processor.py', 'audio/frequency_volume_processor.py']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.xml')),
     ],
     install_requires=['setuptools'],
@@ -30,7 +30,8 @@ setup(
         'console_scripts': [
             'audio_publisher = audio.audio:main',
             'audio_subscriber = audio.audio_subscriber:main',
-            'volume_processor = audio.volume_processor:main'
+            'volume_processor = audio.volume_processor:main',
+            'frequency_volume_processor = audio.frequency_volume_processor:main'
         ],
     },
 )

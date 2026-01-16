@@ -13,8 +13,8 @@ class SoundHunter(Node):
     def __init__(self):
         super().__init__('sound_hunter')
         self.vehicle_name = os.getenv('VEHICLE_NAME','duckie05')
-        self.left_vel_mult  = os.getenv('LEFT_VEL_MULT',1)
-        self.right_vel_mult = os.getenv('RIGHT_VEL_MULT',1)
+        self.left_vel_mult  = os.getenv('LEFT_VEL_MULT',0.8)
+        self.right_vel_mult = os.getenv('RIGHT_VEL_MULT',0.6)
         
         # ------------------ Subscribers ------------------
         self.create_subscription(
@@ -26,7 +26,7 @@ class SoundHunter(Node):
 
         self.create_subscription(
             Float32,
-            f'/{self.vehicle_name}/volume_stream',
+            f'/{self.vehicle_name}/frequency_volume_stream', # chnaged from volume_stream,
             self.sound_callback,
             1
         )
@@ -66,6 +66,7 @@ class SoundHunter(Node):
         self.scan_start_time = None
         self.scan_start_yaw = 0.0         # yaw when scan started
         self.scan_target_yaw = 0.0        # target yaw for scan end
+        self.is_first_scan = True         # first scan is 360°, rescans are 90°
 
         self.max_sound = 0.0
         self.best_yaw = 0.0
@@ -82,7 +83,7 @@ class SoundHunter(Node):
         self.declare_parameter('wait_duration', 2.0)
         self.declare_parameter('scan_angle', 1.57)  # 90 degrees in radians (±45°)
         self.declare_parameter('scan_speed', 0.3)
-        self.declare_parameter('rotate_speed', 0.1)
+        self.declare_parameter('rotate_speed', 0.3)
         self.declare_parameter('forward_speed', 0.8)
         self.declare_parameter('yaw_tolerance', 0.4) # 20 deg
         self.declare_parameter('target_range', 0.15)
@@ -189,20 +190,25 @@ class SoundHunter(Node):
         
 
     def start_scan(self):
-        """Start angle-based scan: ±45° from current heading (90° total)"""
+        """Start angle-based scan: 360° first time, then 90° rescans"""
         self.scanning = True
         self.max_sound = 0.0
         self.best_yaw = self.current_yaw
+        self.scan_start_yaw = self.current_yaw
         
-        # Calculate scan range: current_yaw ± (scan_angle / 2)
-        # Example: if current_yaw = 0, scan_angle = 1.57 (90°)
-        # Then scan from -0.785 to +0.785 rad (-45° to +45°)
-        self.scan_start_yaw = self.current_yaw - (self.scan_angle / 2.0)
-        self.scan_target_yaw = self.current_yaw + (self.scan_angle / 2.0)
-        
-        self.publish_state("scanning")
-        self.get_logger().info(f"Started angle-based scan: {self.scan_angle:.2f} rad (±{self.scan_angle/2:.2f})")
-        self.get_logger().info(f"  From {self.scan_start_yaw:.2f} to {self.scan_target_yaw:.2f} rad")
+        if self.is_first_scan:
+            # First scan: full 360° rotation to find sound source
+            scan_range = 2.0 * math.pi  # 360 degrees
+            self.scan_target_yaw = self.scan_start_yaw + scan_range
+            self.publish_state("scanning")
+            self.get_logger().info(f"Started INITIAL 360° scan from {self.scan_start_yaw:.2f} rad")
+        else:
+            # Rescan: ±45° from current heading (90° total) to refine direction
+            self.scan_start_yaw = self.current_yaw - (self.scan_angle / 2.0)
+            self.scan_target_yaw = self.current_yaw + (self.scan_angle / 2.0)
+            self.publish_state("scanning")
+            self.get_logger().info(f"Started RESCAN: {self.scan_angle:.2f} rad (±{self.scan_angle/2:.2f})")
+            self.get_logger().info(f"  From {self.scan_start_yaw:.2f} to {self.scan_target_yaw:.2f} rad")
 
     def scan_for_sound(self):
         """Scan by rotating right, tracking loudest direction"""
@@ -214,23 +220,36 @@ class SoundHunter(Node):
             self.max_sound = self.sound_level
             self.best_yaw = self.current_yaw
 
-        # Check if scan complete (reached target angle)
-        # Normalize angles for comparison
-        current_normalized = math.atan2(math.sin(self.current_yaw), math.cos(self.current_yaw))
-        target_normalized = math.atan2(math.sin(self.scan_target_yaw), math.cos(self.scan_target_yaw))
+        # Calculate how much we've rotated from start
+        angle_rotated = self.current_yaw - self.scan_start_yaw
+        angle_target = self.scan_target_yaw - self.scan_start_yaw
         
-        # Check if we've rotated past the target (accounting for wraparound)
-        angle_remaining = target_normalized - current_normalized
-        angle_remaining = math.atan2(math.sin(angle_remaining), math.cos(angle_remaining))
-        
-        if angle_remaining <= 0:  # Reached or passed target
-            self.stop()
-            self.scanning = False
-            self.rotating_to_target = True
-            self.publish_state("rotating")
-            self.get_logger().info(
-                f"Scan complete | Max volume: {self.max_sound:.1f} | Best Yaw: {self.best_yaw:.2f} rad"
-            )
+        # For 360° scan, check if we've done full rotation
+        if self.is_first_scan:
+            # Check if rotated ~360° (2*pi radians)
+            if angle_rotated >= angle_target - self.yaw_tolerance:
+                self.stop()
+                self.scanning = False
+                self.is_first_scan = False  # Mark first scan complete
+                self.rotating_to_target = True
+                self.publish_state("rotating")
+                self.get_logger().info(
+                    f"360° scan complete | Max volume: {self.max_sound:.1f} | Best Yaw: {self.best_yaw:.2f} rad"
+                )
+        else:
+            # For 90° rescan, check if reached target with tolerance
+            angle_remaining = self.scan_target_yaw - self.current_yaw
+            # Normalize to [-pi, pi]
+            angle_remaining = math.atan2(math.sin(angle_remaining), math.cos(angle_remaining))
+            
+            if abs(angle_remaining) <= self.yaw_tolerance:  # Within tolerance
+                self.stop()
+                self.scanning = False
+                self.rotating_to_target = True
+                self.publish_state("rotating")
+                self.get_logger().info(
+                    f"Rescan complete | Max volume: {self.max_sound:.1f} | Best Yaw: {self.best_yaw:.2f} rad"
+                )
 
     def rotate_to_best_yaw(self):
         # Calculate angle difference (shortest path)

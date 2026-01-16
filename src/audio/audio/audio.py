@@ -19,7 +19,7 @@ class AudioPublisher(Node):
         self.declare_parameter('rate', 16000)
         self.declare_parameter('channels', 1)
         self.declare_parameter('period_size', 1024)
-        self.declare_parameter('publish_rate', 20.0)  # Hz - 20Hz = 50ms updates (responsive!)
+        self.declare_parameter('publish_rate', 10.0)  # Hz - how often to read and publish
         
         # Get parameters
         device = self.get_parameter('device').value
