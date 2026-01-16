@@ -253,12 +253,13 @@ class SoundHunter(Node):
             
             # Calculate how much to rotate back to face max sound direction
             if self.max_sound_time is not None:
-                # Time from max sound until now
-                time_since_max = (self.get_clock().now() - self.max_sound_time).nanoseconds * 1e-9
-                self.rotate_duration = time_since_max
+                # Time from scan START to max sound (not from max to end!)
+                # After 360° scan, robot is back at start, so rotate right by time_to_max
+                time_to_max = (self.max_sound_time - self.scan_start_time).nanoseconds * 1e-9
+                self.rotate_duration = time_to_max
                 self.get_logger().info(
-                    f"Scan complete | Max sound: {self.max_sound:.1f} | "
-                    f"Time since max: {time_since_max:.1f}s | Will rotate back: {self.rotate_duration:.1f}s"
+                    f"Scan complete | Max sound: {self.max_sound:.1f} at {time_to_max:.1f}s | "
+                    f"Will rotate RIGHT for: {self.rotate_duration:.1f}s"
                 )
             else:
                 # No sound detected during scan
