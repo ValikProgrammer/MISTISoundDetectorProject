@@ -60,8 +60,7 @@ ros2 run audio frequency_volume_processor --ros-args \ -p target_frequency:=2000
 
 
 
-ros2 run movement movement.py --ros-args \
-  -p volume_threshold:=30.0 \
+ros2 run movement movement.py --ros-args -p left_vel_mult:=0.8 -p right_vel_mult:=0.6 -p volume_threshold:=5.0 
 
 ros2 run blinker blinker.py
 ```

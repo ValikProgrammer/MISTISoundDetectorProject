@@ -13,8 +13,6 @@ class SoundHunter(Node):
     def __init__(self):
         super().__init__('sound_hunter')
         self.vehicle_name = os.getenv('VEHICLE_NAME','duckie05')
-        self.left_vel_mult  = os.getenv('LEFT_VEL_MULT',0.8)
-        self.right_vel_mult = os.getenv('RIGHT_VEL_MULT',0.6)
         
         # ------------------ Subscribers ------------------
         self.create_subscription(
@@ -88,9 +86,11 @@ class SoundHunter(Node):
 
         # ------------------ Parameters ------------------
         # Declare parameters with defaults
+        self.declare_parameter('left_vel_mult', 1.0)  # left motor multiplier for calibration
+        self.declare_parameter('right_vel_mult', 1.0)  # right motor multiplier for calibration
         self.declare_parameter('volume_threshold', 20.0)
         self.declare_parameter('ratio_threshold', 5.0)  # freq must be x louder than total (filters claps)
-        self.declare_parameter('wait_duration', 2.0)
+        self.declare_parameter('wait_duration', 3.0)
         self.declare_parameter('scan_angle', 1.57)  # 90 degrees in radians (±45°)
         self.declare_parameter('scan_speed', 0.3)
         self.declare_parameter('rotate_speed', 0.3)
@@ -101,17 +101,19 @@ class SoundHunter(Node):
         self.declare_parameter('sound_decrease_threshold', 5.0)  # trigger rescan if sound drops by this amount
         
         # Get parameters
-        self.volume_threshold = self.get_parameter('volume_threshold').value  # start scanning
-        self.ratio_threshold = self.get_parameter('ratio_threshold').value  # freq/total ratio
-        self.wait_duration = self.get_parameter('wait_duration').value  # seconds to wait before scan
-        self.scan_angle = self.get_parameter('scan_angle').value  # 90° scan range (±45°)
-        self.scan_speed = self.get_parameter('scan_speed').value  # wheel speed
-        self.rotate_speed = self.get_parameter('rotate_speed').value  # rotation speed
-        self.forward_speed = self.get_parameter('forward_speed').value  # forward movement speed
-        self.yaw_tolerance = self.get_parameter('yaw_tolerance').value  # radians
-        self.target_range = self.get_parameter('target_range').value  # meters
-        self.rescan_interval = self.get_parameter('rescan_interval').value  # seconds
-        self.sound_decrease_threshold = self.get_parameter('sound_decrease_threshold').value
+        self.left_vel_mult = float(self.get_parameter('left_vel_mult').value)  # motor calibration
+        self.right_vel_mult = float(self.get_parameter('right_vel_mult').value)  # motor calibration
+        self.volume_threshold = float(self.get_parameter('volume_threshold').value)  # start scanning
+        self.ratio_threshold = float(self.get_parameter('ratio_threshold').value)  # freq/total ratio
+        self.wait_duration = float(self.get_parameter('wait_duration').value)  # seconds to wait before scan
+        self.scan_angle = float(self.get_parameter('scan_angle').value)  # 90° scan range (±45°)
+        self.scan_speed = float(self.get_parameter('scan_speed').value)  # wheel speed
+        self.rotate_speed = float(self.get_parameter('rotate_speed').value)  # rotation speed
+        self.forward_speed = float(self.get_parameter('forward_speed').value)  # forward movement speed
+        self.yaw_tolerance = float(self.get_parameter('yaw_tolerance').value)  # radians
+        self.target_range = float(self.get_parameter('target_range').value)  # meters
+        self.rescan_interval = float(self.get_parameter('rescan_interval').value)  # seconds
+        self.sound_decrease_threshold = float(self.get_parameter('sound_decrease_threshold').value)
 
         # ------------------ Control Loop ------------------
         self.timer = self.create_timer(0.1, self.control_loop)  # 10 Hz
@@ -203,6 +205,7 @@ class SoundHunter(Node):
                 self.get_logger().info(f"Rescan triggered: {self.rescan_interval}s elapsed, range={self.range:.2f}m")
                 self.stop()
                 self.moving_forward = False
+                self.publish_state("scanning")
                 self.start_scan()
             # Rescan if: average sound is decreasing (going wrong way)
             elif current_sound_avg < self.baseline_sound_avg - self.sound_decrease_threshold:
@@ -211,6 +214,7 @@ class SoundHunter(Node):
                 )
                 self.stop()
                 self.moving_forward = False
+                self.publish_state("scanning")
                 self.start_scan()
             else:
                 # Continue moving toward target (sound increasing or stable = good!)
@@ -329,8 +333,8 @@ class SoundHunter(Node):
         header.stamp = self.get_clock().now().to_msg()
         header.frame_id = frame_id
         msg.header = header
-        msg.vel_left  = vel_left*self.left_vel_mult
-        msg.vel_right = vel_right*self.right_vel_mult
+        msg.vel_left  = float(vel_left) * self.left_vel_mult
+        msg.vel_right = float(vel_right) * self.right_vel_mult
         self.get_logger().info(f"Running wheels: {msg.vel_left}({vel_left}), {msg.vel_right}({vel_right})")
         self.wheels_pub.publish(msg)
 
