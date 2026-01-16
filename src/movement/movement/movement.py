@@ -5,8 +5,7 @@ from rclpy.node import Node
 import math
 
 from std_msgs.msg import Header, Float32, String
-from sensor_msgs.msg import Range
-from nav_msgs.msg import Odometry
+from sensor_msgs.msg import Range, Imu
 from duckietown_msgs.msg import WheelsCmdStamped
 
 class SoundHunter(Node):
@@ -37,9 +36,9 @@ class SoundHunter(Node):
         )
 
         self.create_subscription(
-            Odometry,
-            f'/{self.vehicle_name}/odom',
-            self.odom_callback,
+            Imu,
+            f'/{self.vehicle_name}/imu_data',
+            self.imu_callback,
             1
         )
 
@@ -161,8 +160,9 @@ class SoundHunter(Node):
     def range_callback(self, msg):
         self.range = msg.range
 
-    def odom_callback(self, msg):
-        q = msg.pose.pose.orientation
+    def imu_callback(self, msg):
+        # Extract yaw from IMU orientation quaternion
+        q = msg.orientation
         siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
         cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
         self.current_yaw = math.atan2(siny_cosp, cosy_cosp)
@@ -335,7 +335,7 @@ class SoundHunter(Node):
         msg.header = header
         msg.vel_left  = float(vel_left) * self.left_vel_mult
         msg.vel_right = float(vel_right) * self.right_vel_mult
-        self.get_logger().info(f"Running wheels: {msg.vel_left}({vel_left}), {msg.vel_right}({vel_right})")
+        # self.get_logger().info(f"Running wheels: {msg.vel_left}({vel_left}), {msg.vel_right}({vel_right})")
         self.wheels_pub.publish(msg)
 
     def stop(self):

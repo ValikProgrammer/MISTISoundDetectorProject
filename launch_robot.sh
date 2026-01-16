@@ -80,7 +80,7 @@ tmux send-keys -t $SESSION:control.2 "ros2 topic echo /\$VEHICLE_NAME/frequency_
 tmux send-keys -t $SESSION:control.3 "ros2 topic echo /\$VEHICLE_NAME/total_volume_stream" C-m
 
 # Right bottom: joystick (ready, don't auto-start)
-tmux send-keys -t $SESSION:control.4 "ros2 launch robot launch.xml"
+tmux send-keys -t $SESSION:control.4 "ros2 launch master_launch launch.xml"
 
 # Create second window for audio processing
 tmux new-window -t $SESSION -n "audio"
@@ -99,7 +99,7 @@ done
 tmux send-keys -t $SESSION:audio.0 "ros2 run audio audio.py" C-m
 
 # Right: volume processor (auto-start)
-tmux send-keys -t $SESSION:audio.1 "ros2 run audio frequency_volume_processor --ros-args \
+tmux send-keys -t $SESSION:audio.1 "ros2 run audio frequency_volume_processor.py --ros-args \
   -p target_frequency:=500.0 \
   -p frequency_bandwidth:=50.0 \
   -p log_interval:=1" C-m

@@ -14,15 +14,7 @@ OLD:`docker run  -d --network=host -v /dev/shm:/dev/shm -v ~/MISTISoundDetectorP
 NEW: 
 ```bash
 
-docker run -d --network=host --privileged \
---device=/dev/snd \
--v $(pwd):/ws \
--e VEHICLE_NAME=duckie05 \
--e LEFT_VEL_MULT=1.0 \
--e RIGHT_VEL_MULT=1.0 \
--e USER_NAME=duckie05 \
---name vec_container \
-vec_image bash -c "while true; do sleep 3600; done"
+docker run -d --network=host --privileged -v /dev/shm:/dev/shm --device=/dev/snd -v $(pwd):/ws -e VEHICLE_NAME=duckie05 -e USER_NAME=duckie05 --name qwe vec_image bash -c "while true; do sleep 3600; done"
 
 ```
 `docker exec -it vec /bin/bash`
@@ -47,8 +39,8 @@ launch tmux with commands (2 windows, 6 terminals)
 
 
 ros2 run audio audio.py --ros-args \
-  -p publish_rate:=5.0 \
-  -p period_size:=3200
+  -p publish_rate:=10.0 \
+  -p period_size:=1600
   -p device:="plughw:2,0"
 
 # not used now, outdated
@@ -56,11 +48,11 @@ ros2 run audio volume_processor.py --ros-args \
   -p smoothing_factor:=1.0 \
   -p volume_scale_max:=5000.0
 
-ros2 run audio frequency_volume_processor --ros-args \ -p target_frequency:=2000.0 -p frequency_bandwidth:=20.0 -p log_interval:=1-p freq_volume_scale_max:=25000.0-p volume_scale_max:=10000.0
-
-
+ros2 run audio frequency_volume_processor.py --ros-args -p target_frequency:=2000.0 -p frequency_bandwidth:=20.0 -p log_interval:=1 -p  freq_volume_scale_max:=400000.0 -p volume_scale_max:=20000.0
 
 ros2 run movement movement.py --ros-args -p left_vel_mult:=0.8 -p right_vel_mult:=0.6 -p volume_threshold:=5.0 
+
+ros2 launch master_launch launch.xml
 
 ros2 run blinker blinker.py
 ```
