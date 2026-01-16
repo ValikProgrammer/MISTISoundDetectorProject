@@ -337,8 +337,14 @@ class SoundHunter(Node):
         header.stamp = self.get_clock().now().to_msg()
         header.frame_id = frame_id
         msg.header = header
-        msg.vel_left  = float(vel_left) * self.left_vel_mult
-        msg.vel_right = float(vel_right) * self.right_vel_mult
+        vel_left  = float(vel_left) * self.left_vel_mult
+        vel_right = float(vel_right) * self.right_vel_mult
+        
+        vel_left, vel_right = self.set_max_power_keeping_ratio(vel_left, vel_right)
+        
+        msg.vel_left = vel_left
+        msg.vel_right = vel_right
+        
         # self.get_logger().info(f"Running wheels: {msg.vel_left}({vel_left}), {msg.vel_right}({vel_right})")
         self.wheels_pub.publish(msg)
 
