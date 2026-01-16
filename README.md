@@ -74,7 +74,7 @@ ros2 run blinker blinker.py
 
 ### TroubleShoting
 
-#### Eceutable not found 
+#### Exeutable not found 
 check file permissions
 ```
 chmod +x -R package_folder 
