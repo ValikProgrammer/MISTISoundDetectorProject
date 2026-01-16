@@ -304,6 +304,7 @@ class SoundHunter(Node):
             self.moving_forward = False
             self.publish_state("idle")
             self.get_logger().info(f"Target reached | Range: {self.range:.3f} m")
+            self.is_first_scan = True  
 
     # ===================================================
     # Utility methods
