@@ -315,6 +315,22 @@ class SoundHunter(Node):
         msg.data = state
         self.state_pub.publish(msg)
 
+
+    def set_max_power_keeping_ratio(self, vel_left, vel_right):
+        """Scale velocities so max becomes 1.0 while keeping ratio"""
+        max_vel = max(abs(vel_left), abs(vel_right))
+        
+        # Avoid division by zero
+        if max_vel == 0.0:
+            return 0.0, 0.0
+        
+        # Always scale so maximum absolute value becomes 1.0
+        scale = 1.0 / max_vel
+        vel_left *= scale
+        vel_right *= scale
+        
+        return vel_left, vel_right
+
     def run_wheels(self, frame_id, vel_left, vel_right):
         msg = WheelsCmdStamped()
         header = Header()
