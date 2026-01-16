@@ -1,23 +1,32 @@
 # MISTI Sound Detector Robot
 
+This project was developed as part of 5-days MIT's MISTI Global Teaching Labs program. Jan 2026.
+- [presentation slides](https://docs.google.com/presentation/d/1izpK_8jd24ZRqsdoBZ5pSNQUvmmD8BSseZpE0pxE2c8/edit?usp=sharing) 
+
+- Robot’s task is to detect the sound, scan for the direction it is coming from and move towards it until it reaches the target. The robot is listening to 2000Hz sound by default, too cancel out all noise. In future we planned to add AI to detected the *HELP* message in different languages, PID regulator and two microphones in order to detect location faster, dynamicly and  accurately. 
+
+Its purpose in Cyprus is to help detect lost people in areas like Troodos.
+
 Reacting to the loudest sound.
 
-## Initial roles  
-Valentin: audio : audio_stream <- stream (Valentin's work to provide the audio ) 
-Eugen: procees audio_stream and create a new publosher with only VOLUME of sound. Publisher name : volume_stream.
-Christos: Create a class, that gets a volume from volume_stream, write some logic in function `movement`. Let it just rotate and make some moves. Publish to  self.wheels_pub = self.create_publisher(WheelsCmdStamped, f'/{self.vehicle_name}/wheels_cmd', 10)
+
+
 
 ## BUILD and RUN instructions 
 
-`docker build -t vec_image .  `
-OLD:`docker run  -d --network=host -v /dev/shm:/dev/shm -v ~/MISTISoundDetectorProject:/ws --privileged --name vec  vec_image:latest`
-NEW: 
+
+
 ```bash
 cd MISTI
+
+docker build -t vec_image .  
+
 docker run -d --network=host --privileged -v /dev/shm:/dev/shm --device=/dev/snd -v $(pwd):/ws -e VEHICLE_NAME=duckie05 -e USER_NAME=duckie05 --name qwe vec_image bash -c "while true; do sleep 3600; done"
 
+docker exec -it vec /bin/bash
+
 ```
-`docker exec -it vec /bin/bash`
+
 REMOVE(if needed):`docker rm -f vec_container`
 
 ## duckie container
