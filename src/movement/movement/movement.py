@@ -231,15 +231,21 @@ class SoundHunter(Node):
         # Rotate right (positive direction)
         self.run_wheels("scan", self.scan_speed, -self.scan_speed)
 
-        # Record loudest sound and the time it occurred
-        if self.sound_level > self.max_sound:
-            elapsed_at_max = (self.get_clock().now() - self.scan_start_time).nanoseconds * 1e-9
-            self.max_sound = self.sound_level
-            self.max_sound_time = self.get_clock().now()
-            self.get_logger().info(f"New max sound: {self.max_sound:.1f} at {elapsed_at_max:.1f}s into scan")
-
+        # During scan, use frequency volume directly (more permissive than filtered sound_level)
+        # This ensures we detect sound even if ratio filter is too strict
+        scan_sound = self.freq_volume if self.freq_volume > self.volume_threshold else 0.0
+        
         # Check if scan duration completed
         elapsed = (self.get_clock().now() - self.scan_start_time).nanoseconds * 1e-9
+
+        # Record loudest sound and the time it occurred (use scan_sound, not filtered sound_level)
+        if scan_sound > self.max_sound:
+            self.max_sound = scan_sound
+            self.max_sound_time = self.get_clock().now()
+            self.get_logger().info(
+                f"New max sound: {self.max_sound:.1f} at {elapsed:.1f}s | "
+                f"freq={self.freq_volume:.1f} total={self.total_volume:.1f}"
+            )
         
         if elapsed >= self.scan_duration:
             self.stop()
