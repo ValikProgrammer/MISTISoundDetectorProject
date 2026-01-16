@@ -56,6 +56,10 @@ class SoundHunter(Node):
         self.sound_history_size = 5  # Track last 5 measurements
         self.baseline_sound_avg = 0.0  # Average sound when starting movement
         self.range = float('inf')
+        
+        # Spike filtering
+        self.prev_freq_volume = 0.0  # Previous frequency volume for spike detection
+        self.startup_time = self.get_clock().now()  # Node start time
 
         self.waiting_to_scan = False      # wait before scanning
         self.wait_start_time = None
@@ -92,6 +96,8 @@ class SoundHunter(Node):
         self.declare_parameter('target_range', 0.15)
         self.declare_parameter('rescan_interval', 10.0)  # rescan after 10s of movement
         self.declare_parameter('sound_decrease_threshold', 5.0)  # trigger rescan if sound drops by this amount
+        self.declare_parameter('spike_threshold', 50.0)  # ignore changes > this value (filters spikes)
+        self.declare_parameter('startup_delay', 2.0)  # ignore audio for first N seconds
         
         # Get parameters
         self.left_vel_mult = float(self.get_parameter('left_vel_mult').value)  # motor calibration
@@ -107,6 +113,8 @@ class SoundHunter(Node):
         self.target_range = float(self.get_parameter('target_range').value)  # meters
         self.rescan_interval = float(self.get_parameter('rescan_interval').value)  # seconds
         self.sound_decrease_threshold = float(self.get_parameter('sound_decrease_threshold').value)
+        self.spike_threshold = float(self.get_parameter('spike_threshold').value)  # spike filter
+        self.startup_delay = float(self.get_parameter('startup_delay').value)  # startup delay
 
         # ------------------ Control Loop ------------------
         self.timer = self.create_timer(0.1, self.control_loop)  # 10 Hz
@@ -114,6 +122,7 @@ class SoundHunter(Node):
         self.get_logger().info(f"Sound Hunter Node started (TIME-BASED ROTATION)")
         self.get_logger().info(f"  LKW={self.left_vel_mult}, RKW={self.right_vel_mult}")
         self.get_logger().info(f"  Volume threshold: {self.volume_threshold}, Ratio threshold: {self.ratio_threshold}x")
+        self.get_logger().info(f"  Spike threshold: {self.spike_threshold}, Startup delay: {self.startup_delay}s")
         self.get_logger().info(f"  Wait duration: {self.wait_duration}s")
         self.get_logger().info(f"  360° scan duration: {self.scan_360_duration}s, 90° rescan duration: {self.scan_90_duration}s")
         self.get_logger().info(f"  Scan speed: {self.scan_speed}, Rotate speed: {self.rotate_speed}, Forward speed: {self.forward_speed}")
@@ -121,8 +130,27 @@ class SoundHunter(Node):
         self.get_logger().info(f"  Rescan interval: {self.rescan_interval}s, Sound decrease threshold: {self.sound_decrease_threshold}")
         
     def freq_sound_callback(self, msg):
-        """Callback for target frequency volume."""
-        self.freq_volume = msg.data
+        """Callback for target frequency volume with spike filtering."""
+        # Ignore audio during startup period (first 2 seconds)
+        time_since_start = (self.get_clock().now() - self.startup_time).nanoseconds * 1e-9
+        if time_since_start < self.startup_delay:
+            return
+        
+        # Spike detection: ignore sudden large changes
+        new_value = msg.data
+        change = abs(new_value - self.prev_freq_volume)
+        
+        if change > self.spike_threshold and self.prev_freq_volume > 0:
+            # Spike detected! Log and ignore
+            self.get_logger().warn(
+                f"Spike detected: {self.prev_freq_volume:.1f} -> {new_value:.1f} "
+                f"(change: {change:.1f}), ignoring"
+            )
+            return
+        
+        # Accept the value
+        self.freq_volume = new_value
+        self.prev_freq_volume = new_value
         self._update_sound_level()
     
     def total_sound_callback(self, msg):
