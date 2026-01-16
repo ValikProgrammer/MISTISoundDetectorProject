@@ -255,9 +255,9 @@ class SoundHunter(Node):
             self.get_logger().info(f"Started RESCAN 90° | Duration: {self.scan_duration:.1f}s")
 
     def scan_for_sound(self):
-        """Scan by rotating right, tracking loudest sound and when it occurred"""
-        # Rotate right (positive direction)
-        self.run_wheels("scan", self.scan_speed, -self.scan_speed)
+        """Scan by rotating left, tracking loudest sound and when it occurred"""
+        # Rotate LEFT (this direction is faster/more reliable for this robot)
+        self.run_wheels("scan", -self.scan_speed, self.scan_speed)
 
         # During scan, use frequency volume directly (more permissive than filtered sound_level)
         # This ensures we detect sound even if ratio filter is too strict
@@ -289,7 +289,7 @@ class SoundHunter(Node):
                 self.rotate_duration = time_since_max
                 self.get_logger().info(
                     f"Scan complete | Max sound: {self.max_sound:.1f} at {time_to_max:.1f}s | "
-                    f"Will rotate LEFT (back) for: {self.rotate_duration:.1f}s"
+                    f"Will rotate RIGHT (back) for: {self.rotate_duration:.1f}s"
                 )
             else:
                 # No sound detected during scan
@@ -319,8 +319,8 @@ class SoundHunter(Node):
 
     def rotate_to_best_yaw(self):
         """Rotate back to face the direction where max sound was heard"""
-        # Rotate LEFT (opposite direction) to go back to max sound position
-        self.run_wheels("rotate_back", -self.scan_speed, self.scan_speed)
+        # Rotate RIGHT (opposite to scan direction) to go back to max sound position
+        self.run_wheels("rotate_back", self.scan_speed, -self.scan_speed)
         
         # Check if rotation duration completed
         elapsed = (self.get_clock().now() - self.rotate_start_time).nanoseconds * 1e-9
