@@ -5,7 +5,7 @@ from rclpy.node import Node
 import math
 
 from std_msgs.msg import Header, Float32, String
-from sensor_msgs.msg import Range, Imu
+from sensor_msgs.msg import Range
 from duckietown_msgs.msg import WheelsCmdStamped
 
 class SoundHunter(Node):
@@ -35,13 +35,6 @@ class SoundHunter(Node):
             1
         )
 
-        self.create_subscription(
-            Imu,
-            f'/{self.vehicle_name}/imu_data',
-            self.imu_callback,
-            1
-        )
-
         # ------------------ Publishers ------------------
         self.wheels_pub = self.create_publisher(
             WheelsCmdStamped,
@@ -62,7 +55,6 @@ class SoundHunter(Node):
         self.sound_history = []  # Rolling history for moving average
         self.sound_history_size = 5  # Track last 5 measurements
         self.baseline_sound_avg = 0.0  # Average sound when starting movement
-        self.current_yaw = 0.0
         self.range = float('inf')
 
         self.waiting_to_scan = False      # wait before scanning
@@ -70,14 +62,16 @@ class SoundHunter(Node):
         
         self.scanning = False
         self.scan_start_time = None
-        self.scan_start_yaw = 0.0         # yaw when scan started
-        self.scan_target_yaw = 0.0        # target yaw for scan end
+        self.scan_duration = 0.0          # how long to scan (seconds)
         self.is_first_scan = True         # first scan is 360°, rescans are 90°
 
         self.max_sound = 0.0
-        self.best_yaw = 0.0
+        self.max_sound_time = None        # timestamp when max sound was heard
 
-        self.rotating_to_target = False   # rotating to best_yaw
+        self.rotating_to_target = False   # rotating to best direction
+        self.rotate_start_time = None
+        self.rotate_duration = 0.0        # how long to rotate (seconds)
+        
         self.moving_forward = False       # moving toward sound
         self.move_start_time = None       # when forward movement started
         
@@ -90,11 +84,11 @@ class SoundHunter(Node):
         self.declare_parameter('volume_threshold', 20.0)
         self.declare_parameter('ratio_threshold', 5.0)  # freq must be x louder than total (filters claps)
         self.declare_parameter('wait_duration', 3.0)
-        self.declare_parameter('scan_angle', 1.57)  # 90 degrees in radians (±45°)
+        self.declare_parameter('scan_360_duration', 6.0)  # seconds for full 360° scan (empirically determined)
+        self.declare_parameter('scan_90_duration', 1.5)   # seconds for 90° rescan (empirically determined)
         self.declare_parameter('scan_speed', 0.3)
         self.declare_parameter('rotate_speed', 0.3)
         self.declare_parameter('forward_speed', 0.8)
-        self.declare_parameter('yaw_tolerance', 0.4) # 20 deg
         self.declare_parameter('target_range', 0.15)
         self.declare_parameter('rescan_interval', 10.0)  # rescan after 10s of movement
         self.declare_parameter('sound_decrease_threshold', 5.0)  # trigger rescan if sound drops by this amount
@@ -105,11 +99,11 @@ class SoundHunter(Node):
         self.volume_threshold = float(self.get_parameter('volume_threshold').value)  # start scanning
         self.ratio_threshold = float(self.get_parameter('ratio_threshold').value)  # freq/total ratio
         self.wait_duration = float(self.get_parameter('wait_duration').value)  # seconds to wait before scan
-        self.scan_angle = float(self.get_parameter('scan_angle').value)  # 90° scan range (±45°)
+        self.scan_360_duration = float(self.get_parameter('scan_360_duration').value)  # 360° scan time
+        self.scan_90_duration = float(self.get_parameter('scan_90_duration').value)  # 90° rescan time
         self.scan_speed = float(self.get_parameter('scan_speed').value)  # wheel speed
         self.rotate_speed = float(self.get_parameter('rotate_speed').value)  # rotation speed
         self.forward_speed = float(self.get_parameter('forward_speed').value)  # forward movement speed
-        self.yaw_tolerance = float(self.get_parameter('yaw_tolerance').value)  # radians
         self.target_range = float(self.get_parameter('target_range').value)  # meters
         self.rescan_interval = float(self.get_parameter('rescan_interval').value)  # seconds
         self.sound_decrease_threshold = float(self.get_parameter('sound_decrease_threshold').value)
@@ -117,13 +111,13 @@ class SoundHunter(Node):
         # ------------------ Control Loop ------------------
         self.timer = self.create_timer(0.1, self.control_loop)  # 10 Hz
 
-        self.get_logger().info(f"Sound Hunter Node started")
+        self.get_logger().info(f"Sound Hunter Node started (TIME-BASED ROTATION)")
         self.get_logger().info(f"  LKW={self.left_vel_mult}, RKW={self.right_vel_mult}")
         self.get_logger().info(f"  Volume threshold: {self.volume_threshold}, Ratio threshold: {self.ratio_threshold}x")
         self.get_logger().info(f"  Wait duration: {self.wait_duration}s")
-        self.get_logger().info(f"  Scan angle: {self.scan_angle:.2f} rad (±{self.scan_angle/2:.2f}), speed: {self.scan_speed}")
-        self.get_logger().info(f"  Rotate speed: {self.rotate_speed}, Forward speed: {self.forward_speed}")
-        self.get_logger().info(f"  Yaw tolerance: {self.yaw_tolerance} rad, Target range: {self.target_range}m")
+        self.get_logger().info(f"  360° scan duration: {self.scan_360_duration}s, 90° rescan duration: {self.scan_90_duration}s")
+        self.get_logger().info(f"  Scan speed: {self.scan_speed}, Rotate speed: {self.rotate_speed}, Forward speed: {self.forward_speed}")
+        self.get_logger().info(f"  Target range: {self.target_range}m")
         self.get_logger().info(f"  Rescan interval: {self.rescan_interval}s, Sound decrease threshold: {self.sound_decrease_threshold}")
         
     def freq_sound_callback(self, msg):
@@ -159,13 +153,6 @@ class SoundHunter(Node):
 
     def range_callback(self, msg):
         self.range = msg.range
-
-    def imu_callback(self, msg):
-        # Extract yaw from IMU orientation quaternion
-        q = msg.orientation
-        siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
-        cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
-        self.current_yaw = math.atan2(siny_cosp, cosy_cosp)
         
     def control_loop(self):
         # Detect sound and start waiting period
@@ -222,90 +209,91 @@ class SoundHunter(Node):
         
 
     def start_scan(self):
-        """Start angle-based scan: 360° first time, then 90° rescans"""
+        """Start time-based scan: 360° first time, then 90° rescans"""
         self.scanning = True
         self.max_sound = 0.0
-        self.best_yaw = self.current_yaw
-        self.scan_start_yaw = self.current_yaw
+        self.max_sound_time = None
+        self.scan_start_time = self.get_clock().now()
         
         if self.is_first_scan:
-            # First scan: full 360° rotation to find sound source
-            scan_range = 2.0 * math.pi  # 360 degrees
-            self.scan_target_yaw = self.scan_start_yaw + scan_range
+            # First scan: full 360° rotation (hardcoded duration)
+            self.scan_duration = self.scan_360_duration
             self.publish_state("scanning")
-            self.get_logger().info(f"Started INITIAL 360° scan from {self.scan_start_yaw:.2f} rad")
+            self.get_logger().info(f"Started INITIAL 360° scan | Duration: {self.scan_duration:.1f}s")
         else:
-            # Rescan: ±45° from current heading (90° total) to refine direction
-            self.scan_start_yaw = self.current_yaw - (self.scan_angle / 2.0)
-            self.scan_target_yaw = self.current_yaw + (self.scan_angle / 2.0)
+            # Rescan: 90° scan (hardcoded duration)
+            self.scan_duration = self.scan_90_duration
             self.publish_state("scanning")
-            self.get_logger().info(f"Started RESCAN: {self.scan_angle:.2f} rad (±{self.scan_angle/2:.2f})")
-            self.get_logger().info(f"  From {self.scan_start_yaw:.2f} to {self.scan_target_yaw:.2f} rad")
+            self.get_logger().info(f"Started RESCAN 90° | Duration: {self.scan_duration:.1f}s")
 
     def scan_for_sound(self):
-        """Scan by rotating right, tracking loudest direction"""
-        # Rotate right (positive yaw direction)
+        """Scan by rotating right, tracking loudest sound and when it occurred"""
+        # Rotate right (positive direction)
         self.run_wheels("scan", self.scan_speed, -self.scan_speed)
 
-        # Record loudest sound and its direction
+        # Record loudest sound and the time it occurred
         if self.sound_level > self.max_sound:
             self.max_sound = self.sound_level
-            self.best_yaw = self.current_yaw
+            self.max_sound_time = self.get_clock().now()
 
-        # Calculate how much we've rotated from start
-        angle_rotated = self.current_yaw - self.scan_start_yaw
-        angle_target = self.scan_target_yaw - self.scan_start_yaw
+        # Check if scan duration completed
+        elapsed = (self.get_clock().now() - self.scan_start_time).nanoseconds * 1e-9
         
-        # For 360° scan, check if we've done full rotation
-        if self.is_first_scan:
-            # Check if rotated ~360° (2*pi radians)
-            if angle_rotated >= angle_target - self.yaw_tolerance:
-                self.stop()
-                self.scanning = False
-                self.is_first_scan = False  # Mark first scan complete
-                self.rotating_to_target = True
-                self.publish_state("rotating")
-                self.get_logger().info(
-                    f"360° scan complete | Max volume: {self.max_sound:.1f} | Best Yaw: {self.best_yaw:.2f} rad"
-                )
-        else:
-            # For 90° rescan, check if reached target with tolerance
-            angle_remaining = self.scan_target_yaw - self.current_yaw
-            # Normalize to [-pi, pi]
-            angle_remaining = math.atan2(math.sin(angle_remaining), math.cos(angle_remaining))
+        if elapsed >= self.scan_duration:
+            self.stop()
+            self.scanning = False
             
-            if abs(angle_remaining) <= self.yaw_tolerance:  # Within tolerance
-                self.stop()
-                self.scanning = False
-                self.rotating_to_target = True
-                self.publish_state("rotating")
+            # Calculate how much to rotate back to face max sound direction
+            if self.max_sound_time is not None:
+                # Time from max sound until now
+                time_since_max = (self.get_clock().now() - self.max_sound_time).nanoseconds * 1e-9
+                # Convert time to rotation angle, then back to time for rotation
+                self.rotate_duration = time_since_max
+            else:
+                # No sound detected, don't rotate
+                self.rotate_duration = 0.0
+            
+            if self.is_first_scan:
+                self.is_first_scan = False  # Mark first scan complete
                 self.get_logger().info(
-                    f"Rescan complete | Max volume: {self.max_sound:.1f} | Best Yaw: {self.best_yaw:.2f} rad"
+                    f"360° scan complete | Max volume: {self.max_sound:.1f} | Rotate back: {self.rotate_duration:.1f}s"
                 )
+            else:
+                self.get_logger().info(
+                    f"Rescan complete | Max volume: {self.max_sound:.1f} | Rotate back: {self.rotate_duration:.1f}s"
+                )
+            
+            # Start rotating to target direction
+            if self.rotate_duration > 0.1:  # Only rotate if significant
+                self.rotating_to_target = True
+                self.rotate_start_time = self.get_clock().now()
+                self.publish_state("rotating")
+            else:
+                # Already facing the right direction, start moving
+                self.moving_forward = True
+                self.move_start_time = self.get_clock().now()
+                self.baseline_sound_avg = self.get_sound_average()
+                self.publish_state("moving_forward")
+                self.get_logger().info(f"No rotation needed | Starting forward movement")
 
     def rotate_to_best_yaw(self):
-        # Calculate angle difference (shortest path)
-        angle_diff = self.best_yaw - self.current_yaw
-        # Normalize to [-pi, pi]
-        angle_diff = math.atan2(math.sin(angle_diff), math.cos(angle_diff))
+        """Rotate back to face the direction where max sound was heard"""
+        # Continue rotating in same direction (right) for the calculated duration
+        self.run_wheels("rotate_back", self.scan_speed, -self.scan_speed)
         
-        if abs(angle_diff) > self.yaw_tolerance:
-            # Rotate left or right based on sign
-            if angle_diff > 0:
-                self.run_wheels("rotate_left", self.rotate_speed, -self.rotate_speed)
-            else:
-                self.run_wheels("rotate_right", -self.rotate_speed, self.rotate_speed)
-        else:
-            # Reached target yaw, start moving forward
+        # Check if rotation duration completed
+        elapsed = (self.get_clock().now() - self.rotate_start_time).nanoseconds * 1e-9
+        
+        if elapsed >= self.rotate_duration:
+            # Finished rotating to target direction
             self.stop()
             self.rotating_to_target = False
             self.moving_forward = True
-            self.move_start_time = self.get_clock().now()  # Start movement timer
-            self.baseline_sound_avg = self.get_sound_average()  # Baseline = avg of last 5 measurements
+            self.move_start_time = self.get_clock().now()
+            self.baseline_sound_avg = self.get_sound_average()
             self.publish_state("moving_forward")
             self.get_logger().info(
-                f"Rotation complete | Current yaw: {self.current_yaw:.2f} rad | "
-                f"Baseline sound avg: {self.baseline_sound_avg:.1f} | Starting forward movement"
+                f"Rotation complete | Baseline sound avg: {self.baseline_sound_avg:.1f} | Starting forward movement"
             )
 
     def move_to_target(self):
