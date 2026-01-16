@@ -13,13 +13,13 @@ import os
 class AudioPublisher(Node):
     def __init__(self):
         super().__init__('audio_publisher')
-        vehicle = os.getenv('VEHICLE_NAME','duckie')
+        vehicle = os.getenv('VEHICLE_NAME','duckie05')
         # Declare parameters with defaults
         self.declare_parameter('device', 'plughw:2,0')
         self.declare_parameter('rate', 16000)
         self.declare_parameter('channels', 1)
         self.declare_parameter('period_size', 1024)
-        self.declare_parameter('publish_rate', 10.0)  # Hz - how often to read and publish
+        self.declare_parameter('publish_rate', 20.0)  # Hz - 20Hz = 50ms updates (responsive!)
         
         # Get parameters
         device = self.get_parameter('device').value

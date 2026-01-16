@@ -19,7 +19,7 @@ class Blinker(Node):
             String,
             f'/{self.vehicle_name}/robot_state',
             self.state_callback,
-            10
+            1  
         )
         
         self.robot_state = "idle"  # idle, sound_detected, scanning, rotating, moving_forward

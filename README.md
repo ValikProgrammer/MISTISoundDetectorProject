@@ -1,15 +1,54 @@
-###
-PROJECT Arhitecture
+### PROJECT Arhitecture
 
 
 Valentin: audio : audio_stream <- stream (Valentin's work to provide the audio ) 
 Eugen: procees audio_stream and create a new publosher with only VOLUME of sound. Publisher name : volume_stream.
 Christos: Create a class, that gets a volume from volume_stream, write some logic in function `movement`. Let it just rotate and make some moves. Publish to  self.wheels_pub = self.create_publisher(WheelsCmdStamped, f'/{self.vehicle_name}/wheels_cmd', 10)
 
+## RUN it 
 
+### BUILD duckie container:
+ 
+`docker run  -d --network=host -v /dev/shm:/dev/shm -v ~/MISTISoundDetectorProject:/ws --privileged --name vec  vec_image:latest`
+`docker exec -it vec /bin/bash`
 
+#### duckie container
+```bash
+cd /ws
+rm -rf build log install 
+colcon build
+source /opt/ros/humble/setup.bash
+source install/local_setup.bash
+```
 
+#### ROS2 RUN commands
+```bash
+ros2 run audio audio.py --ros-args -p publish_rate:=5.0
 
+ros2 run audio volume_processor.py
+
+ros2 run movement movement.py
+
+ros2 run blinker blinker.py
+```
+
+#### SOLVE to alsaaudio (in duckie container):
+```bash
+# In your container
+apt-get update
+apt-get install -y libasound2-dev
+pip3 install --upgrade pyalsaaudio
+
+cd /ws
+colcon build --packages-select audio
+source install/setup.bash
+```
+- different lib:
+```bash
+pip3 install sounddevice
+RUN(plughw instead)
+ros2 run audio audio.py --ros-args -p device:="plughw:2,0" -p rate:=16000
+```
 
 # Skeleton Code for Project
 

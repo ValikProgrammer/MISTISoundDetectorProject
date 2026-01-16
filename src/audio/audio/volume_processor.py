@@ -2,7 +2,7 @@
 """
 Volume Processor Node - Subscribes to audio_stream and publishes volume level.
 
-Author: Eugen
+
 """
 import rclpy
 from rclpy.node import Node
@@ -17,13 +17,15 @@ class VolumeProcessor(Node):
     def __init__(self):
         super().__init__('volume_processor')
         
-        vehicle = os.getenv('VEHICLE_NAME','duckie')
+        vehicle = os.getenv('VEHICLE_NAME','duckie05')
         # Declare parameters
-        self.declare_parameter('smoothing_factor', 0.3)  # For smoothing volume changes
+        self.declare_parameter('smoothing_factor', 1.0)  # 1.0 = instant (no smoothing), 0.9 = 90% instant
         self.declare_parameter('normalize_to_100', True)  # Normalize volume to 0-100 scale
+        self.declare_parameter('volume_scale_max', 5000.0)  # Max expected RMS value for 100%
         
         self.smoothing_factor = self.get_parameter('smoothing_factor').value
         self.normalize_to_100 = self.get_parameter('normalize_to_100').value
+        self.volume_scale_max = self.get_parameter('volume_scale_max').value
         
         # Audio parameters (will be set from metadata)
         self.rate = 44100
@@ -48,15 +50,16 @@ class VolumeProcessor(Node):
             String,
             f'/{vehicle}/audio_stream',
             self.audio_callback,
-            10
+            1
         )
         
         # Publisher for volume
-        self.volume_pub = self.create_publisher(Float32, f'/{vehicle}/volume_stream', 10)
+        self.volume_pub = self.create_publisher(Float32, f'/{vehicle}/volume_stream', 1)
         
         self.get_logger().info('Volume processor started')
-        self.get_logger().info(f'  Smoothing factor: {self.smoothing_factor}')
+        self.get_logger().info(f'  Smoothing factor: {self.smoothing_factor} (1.0=instant, 0.0=max smoothing)')
         self.get_logger().info(f'  Normalize to 0-100: {self.normalize_to_100}')
+        self.get_logger().info(f'  Volume scale max: {self.volume_scale_max} RMS = 100%')
         self.get_logger().info('Waiting for audio stream...')
         
         # Statistics
@@ -110,18 +113,22 @@ class VolumeProcessor(Node):
             # Calculate raw volume (RMS)
             raw_volume = self.calculate_volume(samples)
             
-            # Apply smoothing to reduce jitter
+            # Apply smoothing (if smoothing_factor < 1.0)
             # Formula: smoothed = alpha * new + (1 - alpha) * old
+            # With alpha=0.9: 90% new, 10% old (very responsive)
+            # With alpha=1.0: 100% new, 0% old (instant, no smoothing)
             self.current_volume = (
                 self.smoothing_factor * raw_volume +
                 (1 - self.smoothing_factor) * self.current_volume
             )
             
-            # Normalize if requested
+            # Normalize to 0-100 scale
             if self.normalize_to_100:
-                # For 16-bit audio, max theoretical value is 32767
-                # Normalize to 0-100 scale
-                volume_normalized = min(100.0, (self.current_volume / 327.67))
+                # Scale based on typical max RMS (not theoretical 32767)
+                # Typical loud sound: RMS ~5000
+                # This makes volume more intuitive
+                # min() caps the maximum at 100% (prevents going over)
+                volume_normalized = min(100.0, (self.current_volume / self.volume_scale_max) * 100.0)
             else:
                 volume_normalized = self.current_volume
             
@@ -135,7 +142,7 @@ class VolumeProcessor(Node):
             # Log every 10 packets (~1 second at 10Hz)
             if self.packets_processed % 10 == 0:
                 self.get_logger().info(
-                    f'🔊 Volume: {volume_normalized:.1f}% '
+                    f'Volume: {volume_normalized:.1f}% (raw: {raw_volume:.1f}) '
                     f'(packet #{self.packets_processed})'
                 )
             

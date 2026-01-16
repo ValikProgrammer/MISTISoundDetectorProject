@@ -11,7 +11,7 @@ from duckietown_msgs.msg import WheelsCmdStamped
 class SoundHunter(Node):
     def __init__(self):
         super().__init__('sound_hunter')
-        vehicle = os.getenv('VEHICLE_NAME','duckie')
+        vehicle = os.getenv('VEHICLE_NAME','duckie05')
         self.sound_sub = self.create_subscription(Range, f'/{vehicle}/sound_range', self.sound_callback, 10)
         self.wheels_pub = self.create_publisher(WheelsCmdStamped, f'/{vehicle}/wheels_cmd', 10)
         self.target = float(os.getenv('TARGET_SOUND','1.0'))

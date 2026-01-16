@@ -15,7 +15,7 @@ class AudioSubscriber(Node):
     def __init__(self):
         super().__init__('audio_subscriber')
         
-        vehicle = os.getenv('VEHICLE_NAME','duckie')
+        vehicle = os.getenv('VEHICLE_NAME','duckie05')
         # Audio parameters (will be set from metadata)
         self.rate = 44100
         self.channels = 1
