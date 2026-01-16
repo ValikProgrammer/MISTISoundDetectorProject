@@ -3,7 +3,7 @@
 This project was developed as a part of 5-days *MIT's MISTI Global Teaching Labs* program. Jan 2026.
 - [Presentation slides](https://docs.google.com/presentation/d/1izpK_8jd24ZRqsdoBZ5pSNQUvmmD8BSseZpE0pxE2c8/edit?usp=sharing) 
 
-- Robot’s task is to detect the sound, scan for the direction it is coming from and move towards it until it reaches the target. Moving forward is not accurate, so every 10 seconds or when sound volume decreased by some value, robot does a mini-rescan to increase detection precision.
+- Robot’s task is to detect the sound, scan for the direction it is coming from and move towards it until it reaches the target. Moving forward is not accurate, so every 10 seconds or when sound volume decreased by some value, robot does a mini-rescan to increase detection precision. We couldn't use *odom*, *imu_data* or any other ways to detect robot position in space because it was not supported by our robot, so the only way was to use time-based scanning which is very inaccurate. 
 - The robot is listening to 2000Hz sound by default in order to cancel out all noise. It also stops 30sm before target and changes LED color lights depending on its current state(waiting,scanning,moving forward and etc.). 
 - In future we plan to add AI to detected the *HELP* message in different languages, *PID* regulator and *two microphones* in order to detect location quickly(without scanning), dynamicly(sound object may move) and  accurately(moving forward and rotating is executed as expected in real world with a help of *PID* regulator). 
 
@@ -90,6 +90,12 @@ pip3 install sounddevice
 RUN(plughw instead)
 ros2 run audio audio.py --ros-args -p device:="plughw:2,0" -p rate:=16000
 ```
+Should work, but if it does not:
+- The problem is that alsaaudio(python3.8) is incompatable with 3.10 that ROS2 uses.
+- Do Inter Process Communication with pipe. 
+  - Run container1 with ubunty20 + Python3.8. Capture mic -> alsaaudio -> write to named pipe.
+  - Container2 (main duckie) : read from pipe -> process audio.
+  - Mount the same pipe:  /tmp/audio_pipe:/tmp/audio_pipe
 
 #### Frequencies and sensetivities
 
