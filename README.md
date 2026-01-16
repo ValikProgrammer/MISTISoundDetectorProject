@@ -25,7 +25,7 @@ docker exec -it vec /bin/bash
 
 ```
 
-REMOVE(if needed):`docker rm -f vec_container`
+
 
 ## Inside duckie container
 
@@ -73,6 +73,30 @@ ros2 run blinker blinker.py
 ```
 
 ### TroubleShoting
+
+#### Eceutable not found 
+check file permissions
+```
+chmod +x -R package_folder 
+```
+
+do source 
+```
+cd /ws
+source /opt/ros/humble/setup.bash
+source install/local_setup.bash
+```
+rebuild inside container 
+```
+cd /ws
+rm -rf build log install 
+colcon build
+```
+
+REMOVE container and rebuild it
+`docker rm -f vec_container`
+
+
 #### SOLVE to alsaaudio (in duckie container):
 ```bash
 # In your container
