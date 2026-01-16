@@ -26,8 +26,15 @@ class SoundHunter(Node):
 
         self.create_subscription(
             Float32,
-            f'/{self.vehicle_name}/frequency_volume_stream', # chnaged from volume_stream,
-            self.sound_callback,
+            f'/{self.vehicle_name}/frequency_volume_stream',
+            self.freq_sound_callback,
+            1
+        )
+
+        self.create_subscription(
+            Float32,
+            f'/{self.vehicle_name}/total_volume_stream',
+            self.total_sound_callback,
             1
         )
 
@@ -52,7 +59,9 @@ class SoundHunter(Node):
         )
 
         # ------------------ State ------------------
-        self.sound_level = 0.0
+        self.freq_volume = 0.0  # Target frequency volume
+        self.total_volume = 0.0  # Total volume (all frequencies)
+        self.sound_level = 0.0  # Effective sound level (freq if dominates, else 0)
         self.sound_history = []  # Rolling history for moving average
         self.sound_history_size = 5  # Track last 5 measurements
         self.baseline_sound_avg = 0.0  # Average sound when starting movement
@@ -80,6 +89,7 @@ class SoundHunter(Node):
         # ------------------ Parameters ------------------
         # Declare parameters with defaults
         self.declare_parameter('volume_threshold', 20.0)
+        self.declare_parameter('ratio_threshold', 5.0)  # freq must be x louder than total (filters claps)
         self.declare_parameter('wait_duration', 2.0)
         self.declare_parameter('scan_angle', 1.57)  # 90 degrees in radians (±45°)
         self.declare_parameter('scan_speed', 0.3)
@@ -92,6 +102,7 @@ class SoundHunter(Node):
         
         # Get parameters
         self.volume_threshold = self.get_parameter('volume_threshold').value  # start scanning
+        self.ratio_threshold = self.get_parameter('ratio_threshold').value  # freq/total ratio
         self.wait_duration = self.get_parameter('wait_duration').value  # seconds to wait before scan
         self.scan_angle = self.get_parameter('scan_angle').value  # 90° scan range (±45°)
         self.scan_speed = self.get_parameter('scan_speed').value  # wheel speed
@@ -107,15 +118,32 @@ class SoundHunter(Node):
 
         self.get_logger().info(f"Sound Hunter Node started")
         self.get_logger().info(f"  LKW={self.left_vel_mult}, RKW={self.right_vel_mult}")
-        self.get_logger().info(f"  Volume threshold: {self.volume_threshold}")
+        self.get_logger().info(f"  Volume threshold: {self.volume_threshold}, Ratio threshold: {self.ratio_threshold}x")
         self.get_logger().info(f"  Wait duration: {self.wait_duration}s")
         self.get_logger().info(f"  Scan angle: {self.scan_angle:.2f} rad (±{self.scan_angle/2:.2f}), speed: {self.scan_speed}")
         self.get_logger().info(f"  Rotate speed: {self.rotate_speed}, Forward speed: {self.forward_speed}")
         self.get_logger().info(f"  Yaw tolerance: {self.yaw_tolerance} rad, Target range: {self.target_range}m")
         self.get_logger().info(f"  Rescan interval: {self.rescan_interval}s, Sound decrease threshold: {self.sound_decrease_threshold}")
         
-    def sound_callback(self, msg):
-        self.sound_level = msg.data
+    def freq_sound_callback(self, msg):
+        """Callback for target frequency volume."""
+        self.freq_volume = msg.data
+        self._update_sound_level()
+    
+    def total_sound_callback(self, msg):
+        """Callback for total volume."""
+        self.total_volume = msg.data
+        self._update_sound_level()
+    
+    def _update_sound_level(self):
+        """Update effective sound level based on ratio detection logic."""
+        # Only respond if target frequency DOMINATES (filters out claps/broadband noise)
+        if self.freq_volume > self.volume_threshold and self.freq_volume > self.total_volume * self.ratio_threshold:
+            # Real tone detected! (target freq is 30% louder than average)
+            self.sound_level = self.freq_volume
+        else:
+            # Probably just a clap/broadband noise - ignore
+            self.sound_level = 0.0
         
         # Maintain rolling history of sound levels (last 5 measurements)
         self.sound_history.append(self.sound_level)

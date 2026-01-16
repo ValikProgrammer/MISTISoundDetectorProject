@@ -203,7 +203,7 @@ class FrequencyVolumeProcessor(Node):
                     f'Target {self.target_freq:.0f}Hz: {freq_volume_normalized:.1f}% | '
                     f'Total: {total_volume_normalized:.1f}% | '
                     f'Ratio: {ratio:.0f}% | '
-                    f'🎵 LOUDEST: {peak_freq:.0f}Hz ({peak_magnitude:.0f})'
+                    f'LOUDEST: {peak_freq:.0f}Hz ({peak_magnitude:.0f})'
                 )
             
         except Exception as e:

@@ -1,5 +1,7 @@
 # MISTI Sound Detector Robot
 
+Reacting to the loudest sound.
+
 ## Initial roles  
 Valentin: audio : audio_stream <- stream (Valentin's work to provide the audio ) 
 Eugen: procees audio_stream and create a new publosher with only VOLUME of sound. Publisher name : volume_stream.
@@ -43,7 +45,7 @@ launch tmux with commands (2 windows, 6 terminals)
 #### ROS2 RUN commands
 ```bash
 
-3200 and 5 match each other
+
 ros2 run audio audio.py --ros-args \
   -p publish_rate:=5.0 \
   -p period_size:=3200
@@ -54,10 +56,7 @@ ros2 run audio volume_processor.py --ros-args \
   -p smoothing_factor:=1.0 \
   -p volume_scale_max:=5000.0
 
-ros2 run audio frequency_volume_processor --ros-args \
-  -p target_frequency:=500.0 \
-  -p frequency_bandwidth:=50.0 \
-  -p log_interval:=1
+ros2 run audio frequency_volume_processor --ros-args \ -p target_frequency:=2000.0 -p frequency_bandwidth:=20.0 -p log_interval:=1-p freq_volume_scale_max:=25000.0-p volume_scale_max:=10000.0
 
 
 
