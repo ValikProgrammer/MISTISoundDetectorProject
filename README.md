@@ -3,8 +3,9 @@
 This project was developed as a part of 5-days *MIT's MISTI Global Teaching Labs* program. Jan 2026.
 - [Presentation slides](https://docs.google.com/presentation/d/1izpK_8jd24ZRqsdoBZ5pSNQUvmmD8BSseZpE0pxE2c8/edit?usp=sharing) 
 
-- Robot’s task is to detect the sound, scan for the direction it is coming from and move towards it until it reaches the target. The robot is listening to 2000Hz sound by default, too cancel out all noise. In also stops 30sm before target and changes LED color lights depending on its current state(waiting,scanning,moving forward and etc.). 
-- In future we planned to add AI to detected the *HELP* message in different languages, *PID* regulator and *two microphones* in order to detect location quickly(without scanning), dynamicly(sound object may move) and  accurately(moving forward and rotating is executed as expected in real world with a help of *PID* regulator). 
+- Robot’s task is to detect the sound, scan for the direction it is coming from and move towards it until it reaches the target. Moving forward is not accurate, so every 10 seconds or when sound volume decreased by some value, robot does a mini-rescan to increase detection precision.
+- The robot is listening to 2000Hz sound by default in order to cancel out all noise. It also stops 30sm before target and changes LED color lights depending on its current state(waiting,scanning,moving forward and etc.). 
+- In future we plan to add AI to detected the *HELP* message in different languages, *PID* regulator and *two microphones* in order to detect location quickly(without scanning), dynamicly(sound object may move) and  accurately(moving forward and rotating is executed as expected in real world with a help of *PID* regulator). 
 
 Its purpose in Cyprus is to help locate missing people in areas like the Troodos Mountains or forests, and to find anyone in danger during wildfires.
 
@@ -14,7 +15,7 @@ Its purpose in Cyprus is to help locate missing people in areas like the Troodos
 
 
 ```bash
-cd MISTI
+cd MISTISoundDetectorProject
 
 docker build -t vec_image .  
 
@@ -26,7 +27,14 @@ docker exec -it vec /bin/bash
 
 REMOVE(if needed):`docker rm -f vec_container`
 
-## duckie container
+## Inside duckie container
+
+launch tmux with commands (2 windows, 6 terminals)
+```bash
+./launch_robot.sh
+```
+
+
 rebuild if code changed
 ```bash
 cd /ws
@@ -35,10 +43,7 @@ colcon build
 source /opt/ros/humble/setup.bash
 source install/local_setup.bash
 ```
-launch tmux with commands (2 windows, 6 terminals)
-```bash
-./launch_robot.sh
-```
+
 
 #### ROS2 RUN commands
 ```bash
