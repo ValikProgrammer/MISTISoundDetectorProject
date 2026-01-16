@@ -1,15 +1,12 @@
 # MISTI Sound Detector Robot
 
-This project was developed as part of 5-days MIT's MISTI Global Teaching Labs program. Jan 2026.
-- [presentation slides](https://docs.google.com/presentation/d/1izpK_8jd24ZRqsdoBZ5pSNQUvmmD8BSseZpE0pxE2c8/edit?usp=sharing) 
+This project was developed as a part of 5-days *MIT's MISTI Global Teaching Labs* program. Jan 2026.
+- [Presentation slides](https://docs.google.com/presentation/d/1izpK_8jd24ZRqsdoBZ5pSNQUvmmD8BSseZpE0pxE2c8/edit?usp=sharing) 
 
-- Robot’s task is to detect the sound, scan for the direction it is coming from and move towards it until it reaches the target. The robot is listening to 2000Hz sound by default, too cancel out all noise. In future we planned to add AI to detected the *HELP* message in different languages, PID regulator and two microphones in order to detect location faster, dynamicly and  accurately. 
+- Robot’s task is to detect the sound, scan for the direction it is coming from and move towards it until it reaches the target. The robot is listening to 2000Hz sound by default, too cancel out all noise. In also stops 30sm before target and changes LED color lights depending on its current state(waiting,scanning,moving forward and etc.). 
+- In future we planned to add AI to detected the *HELP* message in different languages, *PID* regulator and *two microphones* in order to detect location quickly(without scanning), dynamicly(sound object may move) and  accurately(moving forward and rotating is executed as expected in real world with a help of *PID* regulator). 
 
-Its purpose in Cyprus is to help detect lost people in areas like Troodos.
-
-Reacting to the loudest sound.
-
-
+Its purpose in Cyprus is to help locate missing people in areas like the Troodos Mountains or forests, and to find anyone in danger during wildfires.
 
 
 ## BUILD and RUN instructions 
