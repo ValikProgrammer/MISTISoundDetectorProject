@@ -19,9 +19,10 @@ class FrequencyVolumeProcessor(Node):
         # Declare parameters
         self.declare_parameter('target_frequency', 500.0)  # Hz (e.g., 500Hz tone)
         self.declare_parameter('frequency_bandwidth', 50.0)  # Hz (±50Hz = 450-550Hz)
-        self.declare_parameter('smoothing_factor', 1.0)  # 1.0 = instant
+        self.declare_parameter('smoothing_factor', 1.0)  # 0.9  (1 = instant)
         self.declare_parameter('normalize_to_100', True)  # 0-100 scale
-        self.declare_parameter('volume_scale_max', 5000.0)  # Max RMS for 100%
+        self.declare_parameter('volume_scale_max', 500.0)  # Max total RMS for 100%
+        self.declare_parameter('freq_volume_scale_max', 5000.0)  # Max frequency RMS for 100% (FFT magnitude is higher)
         self.declare_parameter('log_interval', 10)  # Log every N packets
         
         # Get parameters
@@ -30,6 +31,7 @@ class FrequencyVolumeProcessor(Node):
         self.smoothing_factor = self.get_parameter('smoothing_factor').value
         self.normalize_to_100 = self.get_parameter('normalize_to_100').value
         self.volume_scale_max = self.get_parameter('volume_scale_max').value
+        self.freq_volume_scale_max = self.get_parameter('freq_volume_scale_max').value
         self.log_interval = self.get_parameter('log_interval').value
         
         # Calculate frequency range
@@ -79,6 +81,8 @@ class FrequencyVolumeProcessor(Node):
         self.get_logger().info(f'  Frequency range: {self.freq_min:.1f} - {self.freq_max:.1f} Hz')
         self.get_logger().info(f'  Smoothing factor: {self.smoothing_factor}')
         self.get_logger().info(f'  Normalize to 0-100: {self.normalize_to_100}')
+        self.get_logger().info(f'  Frequency scale max: {self.freq_volume_scale_max} (for target freq)')
+        self.get_logger().info(f'  Total volume scale max: {self.volume_scale_max} (for all freqs)')
         self.get_logger().info(f'  Log interval: every {self.log_interval} packets')
         self.get_logger().info('Waiting for audio stream...')
         
@@ -166,11 +170,11 @@ class FrequencyVolumeProcessor(Node):
                 (1 - self.smoothing_factor) * self.current_total_volume
             )
             
-            # Normalize to 0-100 scale
+            # Normalize to 0-100 scale (use separate scales for frequency and total)
             if self.normalize_to_100:
                 freq_volume_normalized = min(
                     100.0, 
-                    (self.current_volume / self.volume_scale_max) * 100.0
+                    (self.current_volume / self.freq_volume_scale_max) * 100.0
                 )
                 total_volume_normalized = min(
                     100.0,

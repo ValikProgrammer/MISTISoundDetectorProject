@@ -11,15 +11,17 @@ Christos: Create a class, that gets a volume from volume_stream, write some logi
 OLD:`docker run  -d --network=host -v /dev/shm:/dev/shm -v ~/MISTISoundDetectorProject:/ws --privileged --name vec  vec_image:latest`
 NEW: 
 ```bash
-docker run -d --network=host -v /dev/shm:/dev/shm --privileged \
-  --device=/dev/snd \
-  -v $(pwd):/ws \
-  -e VEHICLE_NAME=duckie05 \
-  -e LEFT_VEL_MULT=1.0 \
-  -e RIGHT_VEL_MULT=1.0 \
-  -e USER_NAME=ducki05 \ 
-  --name vec_container \
-  vec_image bash -c "while true; do sleep 3600; done"
+
+docker run -d --network=host --privileged \
+--device=/dev/snd \
+-v $(pwd):/ws \
+-e VEHICLE_NAME=duckie05 \
+-e LEFT_VEL_MULT=1.0 \
+-e RIGHT_VEL_MULT=1.0 \
+-e USER_NAME=duckie05 \
+--name vec_container \
+vec_image bash -c "while true; do sleep 3600; done"
+
 ```
 `docker exec -it vec /bin/bash`
 REMOVE(if needed):`docker rm -f vec_container`
@@ -40,8 +42,11 @@ launch tmux with commands (2 windows, 6 terminals)
 
 #### ROS2 RUN commands
 ```bash
+
+3200 and 5 match each other
 ros2 run audio audio.py --ros-args \
-  -p publish_rate:=10.0 \
+  -p publish_rate:=5.0 \
+  -p period_size:=3200
   -p device:="plughw:2,0"
 
 # not used now, outdated
@@ -62,6 +67,7 @@ ros2 run movement movement.py --ros-args \
 ros2 run blinker blinker.py
 ```
 
+### TroubleShoting
 #### SOLVE to alsaaudio (in duckie container):
 ```bash
 # In your container
@@ -80,4 +86,14 @@ RUN(plughw instead)
 ros2 run audio audio.py --ros-args -p device:="plughw:2,0" -p rate:=16000
 ```
 
+#### Frequencies and sensetivities
+
+```bash
+
+# If frequency is always >80%, increase scale:
+ros2 run audio frequency_volume_processor --ros-args \
+  -p freq_volume_scale_max:=8000.0
+
+
+```
 

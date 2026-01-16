@@ -1,3 +1,4 @@
 python3-alsaaudio
 alsa-utils
 tmux
+tree

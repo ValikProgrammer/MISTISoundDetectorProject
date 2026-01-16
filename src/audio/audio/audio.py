@@ -18,8 +18,8 @@ class AudioPublisher(Node):
         self.declare_parameter('device', 'plughw:2,0')
         self.declare_parameter('rate', 16000)
         self.declare_parameter('channels', 1)
-        self.declare_parameter('period_size', 1024)
-        self.declare_parameter('publish_rate', 10.0)  # Hz - how often to read and publish
+        self.declare_parameter('period_size', 1600)  # Buffer (1600 samples = 100ms at 16kHz)
+        self.declare_parameter('publish_rate', 10.0)  # 10Hz = every 100ms, matches period_size
         
         # Get parameters
         device = self.get_parameter('device').value

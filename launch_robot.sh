@@ -51,10 +51,10 @@ tmux send-keys -t $SESSION:control.0 "ros2 run movement movement.py" C-m
 # Left bottom: blinker (auto-start)
 tmux send-keys -t $SESSION:control.1 "ros2 run blinker blinker.py" C-m
 
-# Right top: split vertically for two monitors
-# Split pane 2 vertically (creates pane 3, shifts old pane 3 to pane 4)
+# Right top: split into two monitors (side-by-side)
+# Split pane 2 horizontally (creates pane 3, shifts old pane 3 to pane 4)
 tmux select-pane -t $SESSION:control.2
-tmux split-window -v -t $SESSION:control.2
+tmux split-window -h -t $SESSION:control.2
 
 # Setup the new pane (pane 3)
 tmux send-keys -t $SESSION:control.3 "cd /ws" C-m
@@ -69,14 +69,14 @@ tmux send-keys -t $SESSION:control.4 "source install/local_setup.bash" C-m
 # Now we have 5 panes:
 # 0: left top (movement)
 # 1: left bottom (blinker)
-# 2: right top-upper (frequency volume)
-# 3: right top-lower (total volume)
+# 2: right top-left (frequency volume)
+# 3: right top-right (total volume)
 # 4: right bottom (joystick)
 
-# Right top upper: frequency volume monitor
+# Right top left: frequency volume monitor
 tmux send-keys -t $SESSION:control.2 "ros2 topic echo /\$VEHICLE_NAME/frequency_volume_stream" C-m
 
-# Right top lower: total volume monitor
+# Right top right: total volume monitor
 tmux send-keys -t $SESSION:control.3 "ros2 topic echo /\$VEHICLE_NAME/total_volume_stream" C-m
 
 # Right bottom: joystick (ready, don't auto-start)

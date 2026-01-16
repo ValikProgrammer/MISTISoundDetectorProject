@@ -21,7 +21,7 @@ class VolumeProcessor(Node):
         # Declare parameters
         self.declare_parameter('smoothing_factor', 1.0)  # 1.0 = instant (no smoothing), 0.9 = 90% instant
         self.declare_parameter('normalize_to_100', True)  # Normalize volume to 0-100 scale
-        self.declare_parameter('volume_scale_max', 5000.0)  # Max expected RMS value for 100%
+        self.declare_parameter('volume_scale_max', 500.0)  # Max expected RMS value for 100% (lower for laptop mic)
         
         self.smoothing_factor = self.get_parameter('smoothing_factor').value
         self.normalize_to_100 = self.get_parameter('normalize_to_100').value
