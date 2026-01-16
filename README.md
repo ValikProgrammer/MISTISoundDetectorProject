@@ -50,7 +50,8 @@ ros2 run audio volume_processor.py --ros-args \
 
 ros2 run audio frequency_volume_processor.py --ros-args -p target_frequency:=2000.0 -p frequency_bandwidth:=20.0 -p log_interval:=1 -p  freq_volume_scale_max:=800000.0 -p volume_scale_max:=20000.0
 
-ros2 run movement movement.py --ros-args -p left_vel_mult:=0.85 -p right_vel_mult:=0.5 -p volume_threshold:=5.0 -p scan_360_duration:=7.0 -p scan_90_duration:=2.0 -p scan_speed:=0.5 -p rotate_speed:=0.5 -p forward_speed:=1.0 -p sound_decrease_threshold:=12.0
+ros2 run movement movement.py --ros-args -p left_vel_mult:=0.75 -p right_vel_mult:=0.5 -p volume_threshold:=5.0 -p scan_360_duration:=7.0 -p scan_90_duration:=2.0 -p scan_speed:=0.5 -p rotate_speed:=0.5 -p forward_speed:=1.0 -p sound_decrease_threshold:=12.0 -p target_range:=0.3
+
 
 ros2 launch master_launch launch.xml
 

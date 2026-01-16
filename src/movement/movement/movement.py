@@ -317,15 +317,15 @@ class SoundHunter(Node):
 
 
     def set_max_power_keeping_ratio(self, vel_left, vel_right):
-        """Scale velocities so max becomes 1.0 while keeping ratio"""
+        """Scale velocities so max becomes 0.85 while keeping ratio"""
         max_vel = max(abs(vel_left), abs(vel_right))
         
         # Avoid division by zero
         if max_vel == 0.0:
             return 0.0, 0.0
         
-        # Always scale so maximum absolute value becomes 1.0
-        scale = 1.0 / max_vel
+        # Always scale so maximum absolute value becomes 0.85
+        scale = 0.85 / max_vel
         vel_left *= scale
         vel_right *= scale
         
