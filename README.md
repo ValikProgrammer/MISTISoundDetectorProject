@@ -13,7 +13,7 @@ Christos: Create a class, that gets a volume from volume_stream, write some logi
 OLD:`docker run  -d --network=host -v /dev/shm:/dev/shm -v ~/MISTISoundDetectorProject:/ws --privileged --name vec  vec_image:latest`
 NEW: 
 ```bash
-
+cd MISTI
 docker run -d --network=host --privileged -v /dev/shm:/dev/shm --device=/dev/snd -v $(pwd):/ws -e VEHICLE_NAME=duckie05 -e USER_NAME=duckie05 --name qwe vec_image bash -c "while true; do sleep 3600; done"
 
 ```
